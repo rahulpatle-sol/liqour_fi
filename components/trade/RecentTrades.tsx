@@ -13,13 +13,18 @@ export default function RecentTrades({ market }: { market:string }) {
 
   useEffect(() => {
     getTrades(market).then(d => {
-      setTrades(d.trades.slice(0,20))
-      if (d.trades.length) prevPrice.current = +d.trades[0].price
-    })
+      if (!d?.trades?.length) return
+      const arr = Array.isArray(d.trades) ? d.trades : []
+      setTrades(arr.slice(0,20))
+      if (arr.length) prevPrice.current = +arr[0].price
+    }).catch(() => {})
     subscribe(`market:${market}`)
     const u = on('FILL', (d:any) => {
-      if (d.market!==market) return
-      setTrades(prev => [d,...prev].slice(0,20))
+      if (!d || d.market!==market) return
+      setTrades(prev => {
+        const arr = Array.isArray(prev) ? prev : []
+        return [d,...arr].slice(0,20)
+      })
     })
     return () => { u() }
   }, [market, subscribe, on])

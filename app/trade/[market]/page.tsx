@@ -13,7 +13,8 @@ const TradingChart = dynamic(() => import('@/components/trade/TradingChart'), { 
 
 export default function TradePage() {
   const params = useParams()
-  const market = (params.market as string).toUpperCase()
+  const raw = params?.market
+  const market = (typeof raw === 'string' ? raw : 'SOL').toUpperCase()
   const [price, setPrice] = useState(0)
   const [change, setChange] = useState(0)
   const [funding, setFunding] = useState(0.0001)

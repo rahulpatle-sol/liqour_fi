@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import SolanaWalletProvider from '@/components/providers/WalletProvider'
 import Navbar from '@/components/layout/Navbar'
+import LenisScrollProvider from '@/components/landing/LenisScrollProvider'
 
 export const viewport: Viewport = {
   themeColor: '#0B0E11',
@@ -32,10 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <SolanaWalletProvider>
-          <div className="min-h-screen bg-[#0B0E11]">
-            <Navbar />
-            <main className="pt-14">{children}</main>
-          </div>
+          <LenisScrollProvider>
+            <div className="min-h-screen bg-black">
+              <Navbar />
+              <main className="">{children}</main>
+            </div>
+          </LenisScrollProvider>
         </SolanaWalletProvider>
       </body>
     </html>
