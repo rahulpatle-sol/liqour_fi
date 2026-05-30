@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:   #0B0E11;
+  --bg-secondary: #161A1E;
+  --bg-card:      #1E2329;
+  --bg-hover:     #252A2F;
+  --border:       #2B3139;
+  --border-light: #363C45;
+  --text-primary: #EAECEF;
+  --text-secondary: #848E9C;
+  --text-muted:   #5E6673;
+  --orange:       #FF8A57;
+  --orange-dim:   rgba(255,138,87,0.12);
+  --ocean:        #2E88B6;
+  --sky:          #9FE0FF;
+  --long:         #0ECB81;
+  --long-dim:     rgba(14,203,129,0.12);
+  --short:        #F6465D;
+  --short-dim:    rgba(246,70,93,0.12);
+  --yellow:       #F0B90B;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ocean); }
+
+/* Range */
+input[type='range'] {
+  -webkit-appearance: none; height: 3px;
+  border-radius: 2px; background: var(--border-light); outline: none; width: 100%;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--orange);
+  cursor: pointer; box-shadow: 0 0 6px rgba(255,138,87,0.5);
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* Selection */
+::selection { background: rgba(46,136,182,0.3); color: #fff; }
+
+/* Wallet adapter */
+.wallet-adapter-button { background: var(--orange) !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 14px !important; }
+.wallet-adapter-modal-wrapper { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 16px !important; }
+.wallet-adapter-modal-title { color: var(--text-primary) !important; }
+
+@keyframes slideUp   { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
+@keyframes spinSlow  { to { transform: rotate(360deg); } }
+@keyframes pulse2    { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+@keyframes tickerScroll { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
+@keyframes shimmer   { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+
+.animate-slide-up    { animation: slideUp 0.35s cubic-bezier(.16,1,.3,1); }
+.animate-fade-in     { animation: fadeIn 0.25s ease-out; }
+.animate-spin-slow   { animation: spinSlow 6s linear infinite; }
+.animate-pulse2      { animation: pulse2 2s ease-in-out infinite; }
+.animate-ticker      { animation: tickerScroll 30s linear infinite; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Price flash */
+.flash-green { animation: flashG .4s ease-out; }
+.flash-red   { animation: flashR .4s ease-out; }
+@keyframes flashG { 0%,100% { background:transparent; } 50% { background:rgba(14,203,129,.15); } }
+@keyframes flashR { 0%,100% { background:transparent; } 50% { background:rgba(246,70,93,.15); } }
