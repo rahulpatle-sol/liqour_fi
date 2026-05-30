@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createChart, CandlestickSeries, LineSeries, HistogramSeries } from 'lightweight-charts'
+import { createChart } from 'lightweight-charts'
 import { getCandles } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
@@ -16,7 +16,6 @@ export default function TradingChart({ market }: { market: string }) {
   const [change, setChange] = useState(0)
   const [high, setHigh] = useState(0)
   const [low, setLow] = useState(0)
-  const [vol, setVol] = useState(0)
   const { subscribe, on } = useWebSocket()
 
   const initChart = useCallback(() => {
@@ -33,13 +32,13 @@ export default function TradingChart({ market }: { market: string }) {
       height: containerRef.current.clientHeight,
     })
 
-    const candle = chart.addSeries(CandlestickSeries, {
+    const candle = chart.addCandlestickSeries({
       upColor: '#0ECB81', downColor: '#F6465D',
       borderUpColor: '#0ECB81', borderDownColor: '#F6465D',
       wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
     })
 
-    const volume = chart.addSeries(HistogramSeries, {
+    const volume = chart.addHistogramSeries({
       priceFormat: { type: 'volume' },
       priceScaleId: 'vol',
     })
@@ -99,7 +98,6 @@ export default function TradingChart({ market }: { market: string }) {
 
   return (
     <div className="flex flex-col h-full bg-secondary">
-      {/* Chart header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border flex-wrap shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-tx-primary font-bold">{market}/USDC</span>

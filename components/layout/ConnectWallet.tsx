@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useAuth } from '@/hooks/useAuth'
 import { X, Loader, CheckCircle, AlertCircle } from 'lucide-react'
@@ -14,27 +14,49 @@ const WALLETS = [
 
 export default function ConnectWallet({ onClose }: { onClose: () => void }) {
   const { select, wallets, connected } = useWallet()
-  const { authenticate, loading, error, isAuthenticated } = useAuth()
+  const { authenticate, loading, error } = useAuth()
   const [step, setStep] = useState<Step>('choose')
   const [chosen, setChosen] = useState('')
 
+  const doAuth = useCallback(async () => {
+    setStep('signing')
+    try {
+      await authenticate()
+      setStep('done')
+    } catch {
+      setStep('error')
+    }
+  }, [authenticate])
+
+  // Fires when wallet connects after selection
   useEffect(() => {
     if (connected && step === 'connecting') {
-      setStep('signing')
-      authenticate()
-        .then(() => setStep('done'))
-        .catch(() => setStep('error'))
+      doAuth()
     }
-  }, [connected, step, authenticate])
+  }, [connected, step, doAuth])
 
+  // Auto close after done
   useEffect(() => {
-    if (step === 'done') { const t = setTimeout(onClose, 1400); return () => clearTimeout(t) }
+    if (step === 'done') {
+      const t = setTimeout(onClose, 1400)
+      return () => clearTimeout(t)
+    }
   }, [step, onClose])
 
-  const handleWallet = (name: string) => {
+  const handleWallet = async (name: string) => {
+    setChosen(name)
+
+    // Already connected — skip to signing directly
+    if (connected) {
+      doAuth()
+      return
+    }
+
     const adapter = wallets.find(w => w.adapter.name === name)
-    if (adapter) { select(adapter.adapter.name as any); setChosen(name); setStep('connecting') }
-    else { setChosen(name); setStep('connecting') } // still try
+    if (adapter) {
+      select(adapter.adapter.name as any)
+    }
+    setStep('connecting')
   }
 
   return (
@@ -59,7 +81,7 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Step: Choose wallet */}
+          {/* Choose wallet */}
           {step === 'choose' && (
             <div className="p-4 space-y-2">
               {WALLETS.map(w => (
@@ -83,12 +105,13 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Step: Connecting / Signing */}
+          {/* Connecting / Signing */}
           {(step === 'connecting' || step === 'signing') && (
             <div className="p-8 flex flex-col items-center gap-5">
               <div className="relative w-20 h-20">
                 <div className="absolute inset-0 rounded-full border-2 border-ocean/20 animate-spin-slow" />
-                <div className="absolute inset-1 rounded-full border-2 border-orange/30 animate-spin-slow" style={{ animationDirection: 'reverse', animationDuration: '4s' }} />
+                <div className="absolute inset-1 rounded-full border-2 border-orange/30 animate-spin-slow"
+                  style={{ animationDirection: 'reverse', animationDuration: '4s' }} />
                 <div className="absolute inset-3 rounded-full bg-card flex items-center justify-center">
                   <span className="text-2xl">{WALLETS.find(w => w.name === chosen)?.emoji || '👻'}</span>
                 </div>
@@ -110,7 +133,7 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Step: Done */}
+          {/* Done */}
           {step === 'done' && (
             <div className="p-8 flex flex-col items-center gap-4 animate-fade-in">
               <div className="w-16 h-16 rounded-full bg-long/10 flex items-center justify-center">
@@ -123,7 +146,7 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Step: Error */}
+          {/* Error */}
           {step === 'error' && (
             <div className="p-6 flex flex-col items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-short/10 flex items-center justify-center">
@@ -140,15 +163,19 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Progress */}
+          {/* Progress bar */}
           <div className="px-5 pb-4">
             <div className="h-0.5 bg-border rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-700 ${
-                step==='choose'?'w-0':step==='connecting'?'w-1/3 bg-orange':
-                step==='signing'?'w-2/3 bg-ocean':step==='done'?'w-full bg-long':'w-full bg-short'
+                step === 'choose'      ? 'w-0' :
+                step === 'connecting'  ? 'w-1/3 bg-orange' :
+                step === 'signing'     ? 'w-2/3 bg-ocean' :
+                step === 'done'        ? 'w-full bg-long' :
+                                         'w-full bg-short'
               }`}/>
             </div>
           </div>
+
         </div>
       </div>
     </div>

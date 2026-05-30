@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"app/trade/[market]/page.tsx -> @/components/trade/TradingChart\":{\"id\":\"app/trade/[market]/page.tsx -> @/components/trade/TradingChart\",\"files\":[\"static/chunks/_app-pages-browser_components_trade_TradingChart_tsx.js\"]}}"

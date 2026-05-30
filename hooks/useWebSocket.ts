@@ -9,6 +9,7 @@ export function useWebSocket(userId?: string | null) {
   const ws = useRef<WebSocket | null>(null)
   const handlers = useRef<Map<string, Set<Handler>>>(new Map())
   const reconnectTimer = useRef<NodeJS.Timeout>()
+  const pendingSubscriptions = useRef<Set<string>>(new Set())
 
   const connect = useCallback(() => {
     if (ws.current?.readyState === WebSocket.OPEN) return
@@ -17,6 +18,11 @@ export function useWebSocket(userId?: string | null) {
 
     ws.current.onopen = () => {
       if (userId) ws.current?.send(JSON.stringify({ type: 'AUTH', userId }))
+      
+      // Flush pending subscriptions
+      pendingSubscriptions.current.forEach(channel => {
+        ws.current?.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
+      })
     }
 
     ws.current.onmessage = (e) => {
@@ -40,7 +46,12 @@ export function useWebSocket(userId?: string | null) {
   }, [connect])
 
   const subscribe = useCallback((channel: string) => {
-    ws.current?.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
+    pendingSubscriptions.current.add(channel)
+    
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
+    }
+    // else: will be sent in onopen when connection is ready
   }, [])
 
   const on = useCallback((eventType: string, handler: Handler) => {
