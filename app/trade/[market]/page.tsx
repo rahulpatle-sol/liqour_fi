@@ -23,7 +23,7 @@ export default function TradePage() {
     getMarket(market).then(d => { setPrice(d.price) })
     subscribe(`price:${market}`)
     const u = on('PRICE_UPDATE', (d:any) => { if(d.market===market) setPrice(d.price) })
-    return u
+    return () => { u() }
   }, [market, subscribe, on])
 
   const fmtP = (n: number) => n > 999 ? n.toLocaleString('en-US',{maximumFractionDigits:2}) : n.toFixed(4)

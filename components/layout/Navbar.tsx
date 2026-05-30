@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useAuth } from '@/hooks/useAuth'
 import ConnectWallet from './ConnectWallet'
-import { BarChart2, Trophy, Briefcase, ChevronDown, Globe, Menu, X } from 'lucide-react'
+import { BarChart2, Trophy, Briefcase, ChevronDown, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const MARKETS = ['SOL', 'BTC', 'ETH']

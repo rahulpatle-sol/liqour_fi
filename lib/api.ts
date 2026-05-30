@@ -36,7 +36,7 @@ export const setUsername = (username: string) =>
 // ── Markets ──────────────────────────────────────────────────────────────────
 export const getMarkets = () => req<{ markets: Market[] }>('/markets')
 export const getMarket  = (m: string) => req<{ market: string; price: number; orderbook: OrderbookSnap }>(`/markets/${m}`)
-export const getCandles = (m: string, limit = 200) => req<{ candles: Candle[] }>(`/markets/${m}/candles?limit=${limit}`)
+export const getCandles = (m: string, limit = 200, tf = '1m') => req<{ candles: Candle[] }>(`/markets/${m}/candles?limit=${limit}&tf=${tf}`)
 export const getTrades  = (m: string) => req<{ trades: Trade[] }>(`/markets/${m}/trades`)
 
 // ── Orders ───────────────────────────────────────────────────────────────────

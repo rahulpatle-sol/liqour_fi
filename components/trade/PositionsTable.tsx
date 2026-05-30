@@ -27,7 +27,7 @@ export default function PositionsTable() {
   useEffect(() => {
     subscribe('positions')
     const u = on('POSITION_UPDATE', () => load())
-    return u
+    return () => { u() }
   }, [isAuthenticated, subscribe, on])
 
   const fmtP = (n: number) => n > 999 ? '$' + n.toLocaleString('en-US',{maximumFractionDigits:2}) : '$' + n.toFixed(4)
