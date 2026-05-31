@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useWallet } from '@solana/wallet-adapter-react'
 import { getMarket } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import dynamic from 'next/dynamic'
@@ -15,6 +16,7 @@ export default function TradePage() {
   const params = useParams()
   const raw = params?.market
   const market = (typeof raw === 'string' ? raw : 'SOL').toUpperCase()
+  const { publicKey } = useWallet()
   const [price, setPrice]     = useState(0)
   const [prevPrice, setPrev]  = useState(0)
   const [change, setChange]   = useState(0)
@@ -130,7 +132,7 @@ export default function TradePage() {
 
       {/* ── Bottom Panel ── */}
       <div className="h-48 shrink-0 border-t border-[#2B3139] overflow-hidden">
-        <PositionsTable />
+        <PositionsTable key={publicKey?.toBase58() || 'no-wallet'} />
       </div>
     </div>
   )

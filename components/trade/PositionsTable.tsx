@@ -18,17 +18,20 @@ export default function PositionsTable() {
 
   const load = async () => {
     if (!isAuthenticated) return
-    const [p, o] = await Promise.all([getPositions(), getOrders('open')])
-    setPositions(p.positions); setOrders(o.orders); setBalance(p.balance)
+    try {
+      const [p, o] = await Promise.all([getPositions(), getOrders('open')])
+      setPositions(p.positions); setOrders(o.orders); setBalance(p.balance)
+    } catch {}
   }
 
-  useEffect(() => { load() }, [isAuthenticated])
+  useEffect(() => { load() }, [isAuthenticated, auth?.walletAddress])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     subscribe('positions')
     const u = on('POSITION_UPDATE', () => load())
     return () => { u() }
-  }, [isAuthenticated, subscribe, on])
+  }, [isAuthenticated, auth?.walletAddress, subscribe, on])
 
   const fmtP = (n: number) => n > 999 ? '$' + n.toLocaleString('en-US',{maximumFractionDigits:2}) : '$' + n.toFixed(4)
 
@@ -70,7 +73,7 @@ export default function PositionsTable() {
                       </td>
                       <td className="px-4 py-2.5">
   <button
-    onClick={() => closePosition(pos.market).then(load)}
+    onClick={() => closePosition(pos.market).then(load).catch(()=>{})}
     className="px-2 py-1 rounded text-xs bg-short/10 text-short hover:bg-short/20 transition-colors">
     Close
   </button>
@@ -113,7 +116,7 @@ export default function PositionsTable() {
                         <span className="px-2 py-0.5 rounded text-xs bg-ocean/10 text-ocean capitalize">{o.status}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <button onClick={()=>cancelOrder(o.order_id).then(load)}
+                        <button onClick={()=>cancelOrder(o.order_id).then(load).catch(()=>{})}
                           className="text-tx-muted hover:text-short text-xs transition-colors">Cancel</button>
                       </td>
                     </tr>

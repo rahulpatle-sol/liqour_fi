@@ -1,8 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getPositions, getHistory, getFollowing } from '@/lib/api'
 import type { PositionWithPnl, Fill, FollowRow } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import { useWallet } from '@solana/wallet-adapter-react'
 import WalletActions from '@/components/portfolio/WalletActions'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -10,26 +12,35 @@ import { Briefcase, TrendingUp, History, Users, Wallet } from 'lucide-react'
 type Tab='positions'|'history'|'copying'
 export default function PortfolioPage() {
   const { isAuthenticated,auth }=useAuth()
+  const { publicKey } = useWallet()
+  const { subscribe, on } = useWebSocket(auth?.userId)
   const [tab,setTab]=useState<Tab>('positions')
   const [positions,setPositions]=useState<PositionWithPnl[]>([])
   const [balance,setBalance]=useState<{available:number;locked:number}|null>(null)
   const [history,setHistory]=useState<Fill[]>([])
   const [copying,setCopying]=useState<FollowRow[]>([])
   const [totalPnl,setTotalPnl]=useState(0)
-  useEffect(()=>{
+  const fetchAll = useCallback(() => {
     if(!isAuthenticated)return
-    getPositions().then(d=>{setPositions(d.positions);setBalance(d.balance)})
-    getHistory().then(d=>{setHistory(d.history);setTotalPnl(d.history.reduce((s,f)=>s+(+f.pnl),0))})
-    getFollowing().then(d=>setCopying(d.following))
-  },[isAuthenticated])
+    getPositions().then(d=>{setPositions(d.positions);setBalance(d.balance)}).catch(()=>{})
+    getHistory().then(d=>{setHistory(d.history);setTotalPnl(d.history.reduce((s,f)=>s+(+f.pnl),0))}).catch(()=>{})
+    getFollowing().then(d=>setCopying(d.following)).catch(()=>{})
+  }, [isAuthenticated, auth?.walletAddress])
+  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => {
+    if (!isAuthenticated) return
+    subscribe('positions')
+    const u = on('POSITION_UPDATE', () => fetchAll())
+    return () => { u() }
+  }, [isAuthenticated, publicKey, subscribe, on, fetchAll])
   const fmt=(n:number)=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
   const totalUnrealized=positions.reduce((s,p)=>s+(+p.unrealized_pnl),0)
   if(!isAuthenticated) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><Briefcase size={48} className="text-tx-muted opacity-20"/><p className="text-tx-secondary">Connect wallet to view portfolio</p></div>
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 mt-24">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3"><Briefcase size={22} className="text-orange"/><h1 className="text-2xl font-black text-tx-primary">Portfolio</h1><span className="text-tx-muted text-sm font-mono">{auth.username||auth.walletAddress?.slice(0,8)+'...'}</span></div>
-        <WalletActions onUpdate={() => { getPositions().then(d => { setPositions(d.positions); setBalance(d.balance) }) }} />
+        <WalletActions onUpdate={fetchAll} />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {[{label:'Available',value:fmt(balance?.available||0),color:'text-tx-primary'},{label:'Margin Used',value:fmt(balance?.locked||0),color:'text-orange'},{label:'Unrealized PnL',value:(totalUnrealized>=0?'+':'')+fmt(totalUnrealized),color:totalUnrealized>=0?'text-long':'text-short'},{label:'Realized PnL',value:(totalPnl>=0?'+':'')+fmt(totalPnl),color:totalPnl>=0?'text-long':'text-short'}].map(s=>(

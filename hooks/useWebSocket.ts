@@ -5,59 +5,76 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000/ws'
 
 type Handler = (data: any) => void
 
+let globalWs: WebSocket | null = null
+let globalHandlers: Map<string, Set<Handler>> = new Map()
+let globalSubs: Set<string> = new Set()
+let reconnectTimer: NodeJS.Timeout | null = null
+let isConnecting = false
+let currentUserId: string | null = null
+
+function connectGlobal(userId?: string | null) {
+  if (userId) currentUserId = userId
+  if (isConnecting) return
+  if (globalWs?.readyState === WebSocket.OPEN) {
+    if (currentUserId) globalWs.send(JSON.stringify({ type: 'AUTH', userId: currentUserId }))
+    return
+  }
+
+  isConnecting = true
+  globalWs = new WebSocket(WS_URL)
+
+  globalWs.onopen = () => {
+    isConnecting = false
+    if (currentUserId) globalWs?.send(JSON.stringify({ type: 'AUTH', userId: currentUserId }))
+    globalSubs.forEach(channel => {
+      globalWs?.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
+    })
+  }
+
+  globalWs.onmessage = (e) => {
+    try {
+      const { type, data } = JSON.parse(e.data)
+      globalHandlers.get(type)?.forEach(h => h(data))
+    } catch {}
+  }
+
+  globalWs.onclose = () => {
+    isConnecting = false
+    reconnectTimer = setTimeout(() => connectGlobal(currentUserId), 3000)
+  }
+
+  globalWs.onerror = () => {
+    isConnecting = false
+    globalWs?.close()
+  }
+}
+
 export function useWebSocket(userId?: string | null) {
-  const ws = useRef<WebSocket | null>(null)
-  const handlers = useRef<Map<string, Set<Handler>>>(new Map())
-  const reconnectTimer = useRef<NodeJS.Timeout>()
-  const pendingSubscriptions = useRef<Set<string>>(new Set())
+  const userIdRef = useRef(userId)
 
-  const connect = useCallback(() => {
-    if (ws.current?.readyState === WebSocket.OPEN) return
-
-    ws.current = new WebSocket(WS_URL)
-
-    ws.current.onopen = () => {
-      if (userId) ws.current?.send(JSON.stringify({ type: 'AUTH', userId }))
-      
-      // Flush pending subscriptions
-      pendingSubscriptions.current.forEach(channel => {
-        ws.current?.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
-      })
-    }
-
-    ws.current.onmessage = (e) => {
-      try {
-        const { type, data } = JSON.parse(e.data)
-        handlers.current.get(type)?.forEach(h => h(data))
-      } catch {}
-    }
-
-    ws.current.onclose = () => {
-      reconnectTimer.current = setTimeout(connect, 3000)
+  useEffect(() => {
+    userIdRef.current = userId
+    if (userId) currentUserId = userId
+    if (userId && globalWs?.readyState === WebSocket.OPEN) {
+      globalWs.send(JSON.stringify({ type: 'AUTH', userId }))
     }
   }, [userId])
 
   useEffect(() => {
-    connect()
-    return () => {
-      clearTimeout(reconnectTimer.current)
-      ws.current?.close()
-    }
-  }, [connect])
+    connectGlobal(userIdRef.current)
+  }, [])
 
   const subscribe = useCallback((channel: string) => {
-    pendingSubscriptions.current.add(channel)
-    
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
+    globalSubs.add(channel)
+    if (globalWs?.readyState === WebSocket.OPEN) {
+      globalWs.send(JSON.stringify({ type: 'SUBSCRIBE', channel }))
     }
-    // else: will be sent in onopen when connection is ready
   }, [])
 
   const on = useCallback((eventType: string, handler: Handler) => {
-    if (!handlers.current.has(eventType)) handlers.current.set(eventType, new Set())
-    handlers.current.get(eventType)!.add(handler)
-    return () => handlers.current.get(eventType)?.delete(handler)
+    if (!globalHandlers.has(eventType)) globalHandlers.set(eventType, new Set())
+    globalHandlers.get(eventType)!.add(handler)
+    return () => globalHandlers.get(eventType)?.delete(handler)
   }, [])
 
   return { subscribe, on }
