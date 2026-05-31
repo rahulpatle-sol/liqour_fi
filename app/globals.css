@@ -2,32 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg-primary:   #0B0E11;
-  --bg-secondary: #161A1E;
-  --bg-card:      #1E2329;
-  --bg-hover:     #252A2F;
-  --border:       #2B3139;
-  --border-light: #363C45;
-  --text-primary: #EAECEF;
-  --text-secondary: #848E9C;
-  --text-muted:   #5E6673;
-  --orange:       #FF8A57;
-  --orange-dim:   rgba(255,138,87,0.12);
-  --ocean:        #2E88B6;
-  --sky:          #9FE0FF;
-  --long:         #0ECB81;
-  --long-dim:     rgba(14,203,129,0.12);
-  --short:        #F6465D;
-  --short-dim:    rgba(246,70,93,0.12);
-  --yellow:       #F0B90B;
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
 }
 
-html { scroll-behavior: smooth; overscroll-behavior: none; }
-* { scroll-behavior: smooth; overscroll-behavior: contain; }
-.scroll-container { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+:root {
+  /* Premium Light Theme Colors matching image_9720f7.png */
+  --bg-primary:   #F8F9FA;      /* Subtle crisp background light gray */
+  --bg-secondary: #FFFFFF;      /* Clean pure white for wrappers */
+  --bg-card:      #FFFFFF;      /* Card containers background */
+  --bg-hover:     #F1F3F5;      /* Sleek minimalist hover background */
+  --border:       #E9ECEF;      /* Soft structural line border divider */
+  --border-light: #DEE2E6;      /* Fine control element boundaries */
+  
+  /* Text Hierarchy styling */
+  --text-primary: #1A1A1A;      /* Strong Charcoal text tone */
+  --text-secondary:#6C757D;      /* Medium gray description font color */
+  --text-muted:   #ADB5BD;      /* Soft desaturated placeholder color */
+  
+  /* Accent Brand Blue colors */
+  --orange:       #0052FF;      /* Brand Core Royal Blue */
+  --orange-dim:   rgba(0, 82, 255, 0.06);
+  --ocean:        #0066FF;      
+  --sky:          #E6F0FF;
+  
+  /* Premium, clean non-neon trade badges */
+  --long:         #059669;      /* Emerald Green */
+  --long-dim:     rgba(5, 150, 105, 0.06);
+  --short:        #DC2626;      /* Premium Ruby Red */
+  --short-dim:    rgba(220, 38, 38, 0.06);
+  --yellow:       #D97706;      /* Muted Amber Honey Gold */
+}
+
+/* ⚠️ FIX: Removed 'scroll-behavior: smooth' to allow 
+  Lenis to manage frame cycles smoothly without engine lag!
+*/
+html, body { 
+  overscroll-behavior: none; 
+}
+
+* { 
+  overscroll-behavior: contain; 
+}
+
+.scroll-container { 
+  -webkit-overflow-scrolling: touch; 
+}
 
 body {
   background: var(--bg-primary);
@@ -38,61 +60,98 @@ body {
   line-height: 1.5;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--ocean); }
+/* Minimalist Clean Scrollbars */
+::-webkit-scrollbar { 
+  width: 6px; 
+  height: 6px; 
+}
+::-webkit-scrollbar-track { 
+  background: var(--bg-primary); 
+}
+::-webkit-scrollbar-thumb { 
+  background: var(--border-light); 
+  border-radius: 20px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: var(--orange); 
+}
 
-/* Range */
+/* Clean Custom Form Inputs */
 input[type='range'] {
-  -webkit-appearance: none; height: 3px;
-  border-radius: 2px; background: var(--border-light); outline: none; width: 100%;
+  -webkit-appearance: none; 
+  height: 4px;
+  border-radius: 4px; 
+  background: var(--border-light); 
+  outline: none; 
+  width: 100%;
 }
 input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: var(--orange);
-  cursor: pointer; box-shadow: 0 0 6px rgba(255,138,87,0.5);
+  -webkit-appearance: none; 
+  width: 14px; 
+  height: 14px;
+  border-radius: 50%; 
+  background: var(--orange);
+  cursor: pointer; 
+  box-shadow: 0 2px 6px rgba(0, 82, 255, 0.2);
 }
 input[type='number']::-webkit-outer-spin-button,
-input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-/* Selection */
-::selection { background: rgba(46,136,182,0.3); color: #fff; }
-
-/* Wallet adapter */
-.wallet-adapter-button { background: var(--orange) !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 14px !important; }
-.wallet-adapter-modal-wrapper { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: 16px !important; }
-.wallet-adapter-modal-title { color: var(--text-primary) !important; }
-
-@keyframes slideUp   { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-@keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
-@keyframes spinSlow  { to { transform: rotate(360deg); } }
-@keyframes pulse2    { 0%,100% { opacity:1; } 50% { opacity:.4; } }
-@keyframes tickerScroll { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
-@keyframes shimmer   { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
-
-.animate-slide-up    { animation: slideUp 0.35s cubic-bezier(.16,1,.3,1); }
-.animate-fade-in     { animation: fadeIn 0.25s ease-out; }
-.animate-spin-slow   { animation: spinSlow 6s linear infinite; }
-.animate-pulse2      { animation: pulse2 2s ease-in-out infinite; }
-.animate-ticker      { animation: tickerScroll 30s linear infinite; }
-
-.skeleton {
-  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
+input[type='number']::-webkit-inner-spin-button { 
+  -webkit-appearance: none; 
 }
 
-/* Price flash */
+/* Premium Text Selection highlight */
+::selection { 
+  background: rgba(0, 82, 255, 0.12); 
+  color: var(--orange); 
+}
+
+/* Wallet Adapter Component Adjustments */
+.wallet-adapter-button { 
+  background: var(--orange) !important; 
+  color: white !important;
+  border-radius: 10px !important; 
+  font-weight: 500 !important; 
+  font-size: 14px !important; 
+}
+.wallet-adapter-modal-wrapper { 
+  background: var(--bg-secondary) !important; 
+  border: 1px solid var(--border) !important; 
+  border-radius: 20px !important; 
+  box-shadow: 0 20px 40px rgba(0,0,0,0.05) !important;
+}
+.wallet-adapter-modal-title { 
+  color: var(--text-primary) !important; 
+}
+
+/* Keyframe Animations */
+@keyframes slideUp       { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn        { from { opacity:0; } to { opacity:1; } }
+@keyframes spinSlow      { to { transform: rotate(360deg); } }
+@keyframes pulse2        { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+@keyframes tickerScroll  { 0% { transform:translateX(0); } 100% { transform:translateX(-50%); } }
+@keyframes shimmer       { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+
+.animate-slide-up    { animation: slideUp 0.4s cubic-bezier(.16,1,.3,1); }
+.animate-fade-in     { animation: fadeIn 0.25s ease-out; }
+.animate-spin-slow   { animation: spinSlow 8s linear infinite; }
+.animate-pulse2      { animation: pulse2 2s ease-in-out infinite; }
+.animate-ticker      { animation: tickerScroll 35s linear infinite; }
+
+/* Light Skeleton Shimmer Loader */
+.skeleton {
+  background: linear-gradient(90deg, #F1F3F5 25%, #E9ECEF 50%, #F1F3F5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+/* High-End Clean Financial Flash Updates */
 .flash-green { animation: flashG .4s ease-out; }
 .flash-red   { animation: flashR .4s ease-out; }
-@keyframes flashG { 0%,100% { background:transparent; } 50% { background:rgba(14,203,129,.15); } }
-@keyframes flashR { 0%,100% { background:transparent; } 50% { background:rgba(246,70,93,.15); } }
+@keyframes flashG { 0%,100% { background:transparent; } 50% { background:rgba(5, 150, 105, 0.08); } }
+@keyframes flashR { 0%,100% { background:transparent; } 50% { background:rgba(220, 38, 38, 0.08); } }
 
-
-/* Add inside app/globals.css if required */
+/* Loop Infinite Marquee Layout Component */
 @keyframes marquee {
   0% { transform: translateX(0%); }
   100% { transform: translateX(-50%); }

@@ -20,9 +20,9 @@ const backdrop = {
 }
 
 const modal = {
-  hidden: { opacity: 0, scale: 0.92, y: 20 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring' as const, damping: 25, stiffness: 300 } },
-  exit: { opacity: 0, scale: 0.92, y: 20, transition: { duration: 0.15 } },
+  hidden: { opacity: 0, scale: 0.96, y: 12 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring' as const, damping: 28, stiffness: 320 } },
+  exit: { opacity: 0, scale: 0.96, y: 12, transition: { duration: 0.15 } },
 }
 
 export default function ConnectWallet({ onClose }: { onClose: () => void }) {
@@ -65,37 +65,38 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 selection:bg-blue-100"
     >
+      {/* Premium light-SaaS blur backdrop */}
       <motion.div
         variants={backdrop}
-        className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+        className="absolute inset-0 bg-gray-900/20 backdrop-blur-md"
         onClick={onClose}
       />
       <motion.div
         variants={modal}
-        className="relative w-full max-w-[400px]"
+        className="relative w-full max-w-[380px] z-10"
       >
-        <div className="bg-[#0B0E11] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-[#0052FF]/5">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-2xl">
+          
+          {/* Modal Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#0052FF]/10 flex items-center justify-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-[#0052FF]/20 animate-pulse" />
-                <Zap size={18} className="text-[#0052FF] relative z-10 animate-pulse" />
+              <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center relative overflow-hidden shrink-0">
+                <Zap size={15} className="text-[#0052FF]" />
               </div>
               <div>
-                <p className="text-white font-bold text-sm">Connect to Liqour</p>
-                <p className="text-white/30 text-xs">Solana Wallet Required</p>
+                <p className="text-gray-900 font-bold text-sm tracking-tight">Connect to Liqour</p>
+                <p className="text-gray-400 text-[11px] font-medium">Solana Wallet Required</p>
               </div>
             </div>
             <motion.button
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={onClose}
-              className="text-white/30 hover:text-white p-1.5 rounded-xl hover:bg-white/[0.04] transition-colors"
+              className="text-gray-400 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <X size={18} />
+              <X size={16} />
             </motion.button>
           </div>
 
@@ -104,36 +105,36 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             {step === 'choose' && (
               <motion.div
                 key="choose"
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="p-5 space-y-2"
+                exit={{ opacity: 0, y: -8 }}
+                className="p-4 space-y-1.5"
               >
                 {WALLETS.map((w, i) => (
                   <motion.button
                     key={w.name}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.06, type: 'spring', stiffness: 100 }}
-                    whileHover={{ scale: 1.01, borderColor: 'rgba(0,82,255,0.4)', backgroundColor: 'rgba(255,255,255,0.04)' }}
-                    whileTap={{ scale: 0.99 }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, type: 'spring', stiffness: 120 }}
+                    whileHover={{ scale: 1.005, borderColor: '#DEE2E6', backgroundColor: '#F8F9FA' }}
+                    whileTap={{ scale: 0.995 }}
                     onClick={() => handleWallet(w.name)}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/10 transition-all group"
+                    className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-white border border-gray-100/80 transition-all group"
                   >
-                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-inner"
-                      style={{ background: w.color + '15', border: `1px solid ${w.color}25` }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm shrink-0"
+                      style={{ background: w.color + '10', border: `1px solid ${w.color}20` }}>
                       {w.emoji}
                     </div>
                     <div className="text-left flex-1">
-                      <p className="text-white font-semibold text-sm group-hover:text-[#4F8EFF] transition-colors">{w.name}</p>
-                      <p className="text-white/30 text-xs mt-0.5">{w.desc}</p>
+                      <p className="text-gray-900 font-bold text-xs tracking-tight group-hover:text-[#0052FF] transition-colors">{w.name}</p>
+                      <p className="text-gray-400 text-[11px] font-medium mt-0.5">{w.desc}</p>
                     </div>
-                    <span className="text-white/20 group-hover:text-[#0052FF] group-hover:translate-x-0.5 text-lg font-mono transition-all">›</span>
+                    <span className="text-gray-300 group-hover:text-[#0052FF] group-hover:translate-x-0.5 text-base font-mono transition-all">›</span>
                   </motion.button>
                 ))}
-                <p className="text-center text-xs text-white/20 pt-3">
+                <p className="text-center text-[11px] text-gray-400 pt-2 font-medium">
                   Don&apos;t have a wallet?{' '}
-                  <a href="https://phantom.app" target="_blank" rel="noopener" className="text-[#0052FF] hover:underline font-medium">
+                  <a href="https://phantom.app" target="_blank" rel="noopener font-semibold" className="text-[#0052FF] hover:underline">
                     Get Phantom →
                   </a>
                 </p>
@@ -144,100 +145,99 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             {(step === 'connecting' || step === 'signing') && (
               <motion.div
                 key="loading"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="p-10 flex flex-col items-center gap-6"
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="p-8 flex flex-col items-center gap-5"
               >
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  {/* Neon Glow Outer Rings */}
+                <div className="relative w-20 h-20 flex items-center justify-center">
                   <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-dashed border-[#0052FF]/30"
+                    className="absolute inset-0 rounded-full border-2 border-dashed border-gray-200"
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
                   />
                   <motion.div
-                    className="absolute inset-2 rounded-full border-2 border-[#0052FF]"
+                    className="absolute inset-1 rounded-full border-2 border-[#0052FF]"
                     style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }}
                     animate={{ rotate: -360 }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
                   />
-                  <div className="absolute inset-4 rounded-full bg-[#0F1217] flex items-center justify-center border border-white/10 shadow-2xl">
+                  <div className="absolute inset-3 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 shadow-inner">
                     <motion.span 
-                      animate={{ scale: [1, 1.15, 1] }}
+                      animate={{ scale: [1, 1.08, 1] }}
                       transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="text-3xl select-none"
+                      className="text-2xl select-none"
                     >
-                      {step === 'signing' ? <ShieldCheck size={28} className="text-[#0052FF] animate-pulse" /> : (WALLETS.find(w => w.name === chosen)?.emoji || '👻')}
+                      {step === 'signing' ? <ShieldCheck size={24} className="text-[#0052FF]" /> : (WALLETS.find(w => w.name === chosen)?.emoji || '👻')}
                     </motion.span>
                   </div>
                 </div>
                 
                 <div className="text-center space-y-1.5">
-                  <h4 className="text-white font-bold text-base tracking-tight">
+                  <h4 className="text-gray-900 font-bold text-sm tracking-tight">
                     {step === 'connecting' ? `Opening ${chosen}...` : 'Verify Ownership'}
                   </h4>
-                  <p className="text-white/40 text-xs max-w-[260px] leading-relaxed">
+                  <p className="text-gray-500 text-[11px] font-medium max-w-[240px] leading-relaxed mx-auto">
                     {step === 'signing'
-                      ? 'Please sign the message in your wallet extension to verify account ownership.'
-                      : 'Unlock your extension pop-up and grant application permission.'}
+                      ? 'Please sign the secure cryptographic verification message inside your wallet extension.'
+                      : 'Unlock your desktop extension popup and grant connection approval.'}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-xs text-white/40 font-mono">
-                  <Loader2 size={13} className="animate-spin text-[#0052FF]" />
+                <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px] text-gray-500 font-mono font-semibold">
+                  <Loader2 size={11} className="animate-spin text-[#0052FF]" />
                   <span>{step === 'connecting' ? 'CONNECTING_NODE' : 'AWAITING_SIG'}</span>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 4: Success (Done) */}
+            {/* Step 4: Success */}
             {step === 'done' && (
               <motion.div
                 key="done"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="p-10 flex flex-col items-center gap-5"
+                className="p-8 flex flex-col items-center gap-4"
               >
                 <motion.div
-                  initial={{ scale: 0, rotate: -45 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.1 }}
-                  className="w-16 h-16 rounded-full bg-[#0ECB81]/15 flex items-center justify-center border border-[#0ECB81]/30 shadow-[0_0_30px_rgba(14,203,129,0.2)]"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', damping: 14, stiffness: 220, delay: 0.05 }}
+                  className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 shadow-sm"
                 >
-                  <CheckCircle size={32} className="text-[#0ECB81]" />
+                  <CheckCircle size={24} className="text-emerald-600" />
                 </motion.div>
                 <div className="text-center space-y-1">
-                  <p className="text-white font-black text-lg tracking-tight">Authentication Valid! 🎉</p>
-                  <p className="text-[#0ECB81] text-xs font-semibold bg-[#0ECB81]/10 px-2.5 py-0.5 rounded-full inline-block">
+                  <p className="text-gray-900 font-bold text-sm tracking-tight">Authentication Valid! 🎉</p>
+                  <p className="text-emerald-700 text-[11px] font-bold bg-emerald-50 border border-emerald-100/70 px-2.5 py-0.5 rounded-md inline-block">
                     +1000 USDC Mock Liquidity Active
                   </p>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 5: Error handling */}
+            {/* Step 5: Error Handlers */}
             {step === 'error' && (
               <motion.div
                 key="error"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="p-8 flex flex-col items-center gap-5"
+                className="p-6 flex flex-col items-center gap-4"
               >
-                <div className="w-14 h-14 rounded-full bg-[#F6465D]/15 flex items-center justify-center border border-[#F6465D]/30 shadow-[0_0_20px_rgba(246,70,93,0.1)]">
-                  <AlertCircle size={26} className="text-[#F6465D]" />
+                <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 shadow-sm">
+                  <AlertCircle size={22} className="text-rose-600" />
                 </div>
-                <div className="text-center max-w-[250px]">
-                  <p className="text-white font-bold text-sm">Action Rejected</p>
-                  <p className="text-white/40 text-xs mt-1 leading-relaxed break-words">{error || 'User cancelled authorization or wallet declined.'}</p>
+                <div className="text-center max-w-[240px]">
+                  <p className="text-gray-900 font-bold text-sm tracking-tight">Action Rejected</p>
+                  <p className="text-gray-400 text-[11px] font-medium mt-1 leading-relaxed break-words">{error || 'User cancelled authorization or wallet declined.'}</p>
                 </div>
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
                   onClick={() => setStep('choose')}
-                  className="w-full py-2.5 rounded-xl bg-[#0052FF] text-white text-xs font-bold hover:bg-[#0045E0] transition-colors shadow-[0_4px_20px_rgba(0,82,255,0.3)] uppercase tracking-wider"
+                  className="w-full py-2 rounded-xl bg-[#0052FF] text-white text-xs font-bold hover:bg-[#0045E0] transition-colors shadow-sm shadow-blue-500/10 tracking-wide"
                 >
                   Return to List
                 </motion.button>
@@ -245,15 +245,15 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             )}
           </AnimatePresence>
 
-          {/* Bottom Core Progress bar */}
-          <div className="px-6 pb-5">
-            <div className="h-0.5 bg-white/5 rounded-full overflow-hidden">
+          {/* Bottom Progress Tracker Block */}
+          <div className="px-5 pb-4">
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
                 animate={{
                   width: step === 'choose' ? '0%' : step === 'connecting' ? '35%' : step === 'signing' ? '70%' : '100%',
-                  backgroundColor: step === 'error' ? '#F6465D' : step === 'done' ? '#0ECB81' : '#0052FF',
+                  backgroundColor: step === 'error' ? '#DC2626' : step === 'done' ? '#059669' : '#0052FF',
                 }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
+                transition={{ duration: 0.35, ease: 'easeInOut' }}
                 className="h-full rounded-full"
               />
             </div>

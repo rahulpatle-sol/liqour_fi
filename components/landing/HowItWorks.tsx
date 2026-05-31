@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ArrowRight, Cpu, GitPullRequest, Activity, BarChart3 } from 'lucide-react'
+import { Cpu, GitPullRequest, Activity, BarChart3 } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -41,10 +41,13 @@ export default function HowItWorks() {
 
         gsap.fromTo(
           card,
-          { y: 50, opacity: 0 },
+          { y: 40, opacity: 0 },
           {
-            y: 0, opacity: 1, duration: 0.8, ease: 'power3.out',
-            scrollTrigger: { trigger: card, start: 'top 80%' },
+            y: 0, 
+            opacity: 1, 
+            duration: 0.8, 
+            ease: 'power3.out',
+            scrollTrigger: { trigger: card, start: 'top 85%' },
           }
         )
       })
@@ -54,8 +57,15 @@ export default function HowItWorks() {
           lineRef.current,
           { scaleY: 0, transformOrigin: 'top center' },
           {
-            scaleY: 1, duration: 1.5, ease: 'power2.inOut',
-            scrollTrigger: { trigger: sectionRef.current, start: 'top 60%', end: 'bottom 40%', scrub: 1 },
+            scaleY: 1, 
+            duration: 1.2, 
+            ease: 'none',
+            scrollTrigger: { 
+              trigger: sectionRef.current, 
+              start: 'top 40%', 
+              end: 'bottom 60%', 
+              scrub: 0.5 
+            },
           }
         )
       }
@@ -64,47 +74,63 @@ export default function HowItWorks() {
   }, [])
 
   return (
-    <section ref={sectionRef} className="bg-black py-24 px-4 relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#0052FF]/[0.02] rounded-full blur-3xl pointer-events-none" />
+    <section ref={sectionRef} className="bg-[#F8F9FA] py-24 px-6 relative overflow-hidden w-full border-t border-gray-200/40">
+      {/* Background Dot Grid Effect matching image_9720f7.png */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
+      
+      {/* Subtle light ambient light blur */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/[0.015] rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-16">
-          <span className="text-[#0052FF] text-xs font-semibold tracking-widest uppercase mb-3 block">
-            How It Works
+      <div className="max-w-4xl mx-auto relative z-10 selection:bg-blue-100">
+        
+        {/* Section Header */}
+        <div className="text-center mb-20">
+          <span className="text-[#0052FF] text-xs font-bold tracking-widest uppercase mb-3 block">
+            Execution Flow
           </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-white">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">
             Atomic Copy Sequence
           </h2>
-          <p className="text-white/40 mt-3 max-w-lg mx-auto">
+          <p className="text-gray-500 mt-3 max-w-md mx-auto text-base font-normal">
             Every copy trade executes atomically inside the matching engine — same Rust runtime, same slot.
           </p>
         </div>
 
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-[19px] top-0 bottom-0 w-px bg-white/10 hidden md:block" />
+        {/* Timeline Flow Container */}
+        <div className="relative max-w-2xl mx-auto">
+          
+          {/* Base Background Track Line */}
+          <div className="absolute left-[19px] top-4 bottom-4 w-px bg-gray-200 hidden md:block" />
+          
+          {/* Animated Blue Progress Line */}
           <div
             ref={lineRef}
-            className="absolute left-[19px] top-0 w-px bg-gradient-to-b from-[#0052FF] to-[#3B82F6] hidden md:block"
-            style={{ height: '100%' }}
+            className="absolute left-[19px] top-4 bottom-4 w-px bg-gradient-to-b from-[#0052FF] to-blue-400 hidden md:block"
+            style={{ height: 'calc(100% - 32px)' }}
           />
 
-          <div className="space-y-12 md:space-y-16">
+          {/* Cards Stack */}
+          <div className="space-y-8 md:space-y-12">
             {STEPS.map((s, i) => (
-              <div key={s.title} data-step={i} className="flex gap-6 md:gap-10">
-                <div className="relative z-10 shrink-0">
-                  <div className="w-10 h-10 rounded-xl bg-[#0052FF]/10 border border-[#0052FF]/30 flex items-center justify-center">
-                    <s.icon size={18} className="text-[#0052FF]" />
+              <div key={s.title} data-step={i} className="flex gap-6 md:gap-8 items-start group">
+                
+                {/* Node Milestone Icon */}
+                <div className="relative z-10 shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center transition-colors group-hover:border-[#0052FF]/40">
+                    <s.icon size={16} className="text-[#0052FF]" />
                   </div>
                 </div>
-                <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-6 flex-1 hover:border-[#0052FF]/30 transition-colors">
-                  <h3 className="text-white font-bold text-lg mb-2">{s.title}</h3>
-                  <p className="text-white/40 text-sm leading-relaxed">{s.desc}</p>
+                
+                {/* Clean Content Card Panel */}
+                <div className="bg-white border border-gray-100 shadow-sm hover:shadow-md rounded-2xl p-6 flex-1 transition-all duration-300">
+                  <h3 className="text-gray-900 font-bold text-base mb-1.5 tracking-tight">{s.title}</h3>
+                  <p className="text-gray-500 text-sm font-normal leading-relaxed">{s.desc}</p>
                 </div>
+
               </div>
             ))}
           </div>
+
         </div>
       </div>
     </section>

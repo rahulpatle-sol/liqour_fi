@@ -1,18 +1,7 @@
 import { PublicKey, Transaction, Connection, SystemProgram } from '@solana/web3.js'
 import { BN, Program, AnchorProvider } from '@coral-xyz/anchor'
 import { IDL } from './idl'
-
-const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
-const VAULT_TOKEN_ACCOUNT = new PublicKey('8PF5cjyr9Kumoh2PmxWnvig6L8aJojZdnp23TATkaEdG')
-const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
-const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xr25ix9sJ5qwTtK6')
-
-function getAssociatedTokenAddress(wallet: PublicKey, mint: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [wallet.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0]
-}
+import { USDC_MINT, VAULT_TOKEN_ACCOUNT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from './solana'
 
 export async function depositUSDC(
   connection: Connection,

@@ -8,6 +8,7 @@ import FeatureScroll from '@/components/landing/FeatureScroll'
 import HowItWorks from '@/components/landing/HowItWorks'
 import LeaderboardPreview from '@/components/landing/LeaderboardPreview'
 import CTABanner from '@/components/landing/CTABanner'
+import Footer from '@/components/layout/Footer'
 
 export default function Home() {
   const { subscribe } = useWebSocket()
@@ -25,6 +26,7 @@ export default function Home() {
       <HowItWorks />
       <LeaderboardPreview />
       <CTABanner />
+      <Footer/>
     </>
   )
 }
