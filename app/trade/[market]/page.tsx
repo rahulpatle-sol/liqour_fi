@@ -49,7 +49,7 @@ export default function TradePage() {
       style={{ height: 'calc(100vh - 56px)'  }}
     >
       {/* ── Top Ticker ── */}
-      <div className="flex items-center gap-5 px-4 h-12 bg-[#161A1E] border-b border-[#2B3139] overflow-x-auto shrink-0 scrollbar-hide">
+      <div className="flex items-center gap-5 px-4 h-12 bg-[#161A1E] border-b border-[#2B3139] overflow-x-auto shrink-0 scrollbar-hide scroll-container">
         {/* Pair */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#9945FF] to-[#14F195] flex items-center justify-center text-[10px] font-bold text-white">

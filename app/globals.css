@@ -25,7 +25,9 @@
   --yellow:       #F0B90B;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overscroll-behavior: none; }
+* { scroll-behavior: smooth; overscroll-behavior: contain; }
+.scroll-container { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 
 body {
   background: var(--bg-primary);
