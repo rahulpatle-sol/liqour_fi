@@ -1,272 +1,361 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useAuth } from '@/hooks/useAuth'
 import ConnectWallet from './ConnectWallet'
 import { motion, AnimatePresence } from 'framer-motion'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { BarChart2, Trophy, Briefcase, ChevronDown, Menu, X, Zap } from 'lucide-react'
+import { BarChart2, Trophy, Briefcase, ChevronDown, Menu, X, Zap, Copy, Check } from 'lucide-react'
 import clsx from 'clsx'
 
-gsap.registerPlugin(ScrollTrigger)
-
-const MARKETS = ['SOL', 'BTC', 'ETH']
-const NAV = [
-  { href: '/leaderboard', label: 'Copy Trading', icon: Trophy },
-  { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
+const MARKETS = [
+  { sym: 'SOL', color: '#9945FF', change: '+2.4%', up: true },
+  { sym: 'BTC', color: '#F7931A', change: '-0.8%', up: false },
+  { sym: 'ETH', color: '#627EEA', change: '+1.2%', up: true },
 ]
 
-const staggerItem = {
-  hidden: { opacity: 0, y: -12 },
-  show: { opacity: 1, y: 0 },
-}
+const NAV = [
+  { href: '/leaderboard', label: 'Copy Trading', icon: Trophy },
+  { href: '/portfolio',   label: 'Portfolio',    icon: Briefcase },
+]
 
 export default function Navbar() {
-  const pathname = usePathname()
+  const pathname        = usePathname()
   const { isAuthenticated, auth, logout } = useAuth()
-  const { disconnect } = useWallet()
-  const [showConnect, setShowConnect] = useState(false)
-  const [showMarkets, setShowMarkets] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const navRef = useRef<HTMLElement>(null)
+  const { disconnect, connected, publicKey } = useWallet()
+  const [showConnect,  setShowConnect]  = useState(false)
+  const [showMarkets,  setShowMarkets]  = useState(false)
+  const [mobileOpen,   setMobileOpen]   = useState(false)
+  const [scrolled,     setScrolled]     = useState(false)
+  const [copied,       setCopied]       = useState(false)
 
+  // ── scroll detection ──────────────────────────────────────
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      ScrollTrigger.create({
-        start: 'top -48px',
-        end: 99999,
-        onUpdate: (self) => {
-          setScrolled(self.progress > 0)
-        },
-      })
-    }, navRef)
-    return () => ctx.revert()
+    const handler = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
   }, [])
 
-  const isTrading = pathname.startsWith('/trade')
+  // ── wallet disconnect bug fix ─────────────────────────────
+  useEffect(() => {
+    if (!connected && isAuthenticated) logout()
+  }, [connected])
+
+  const isTrading     = pathname.startsWith('/trade')
   const currentMarket = isTrading ? pathname.split('/')[2]?.toUpperCase() : null
+
+  // Fallback tracking active address from either backend auth or direct public key
+  const activeAddress = auth?.walletAddress || publicKey?.toBase58()
+
+  const copyAddr = () => {
+    if (!activeAddress) return
+    navigator.clipboard.writeText(activeAddress)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  const shortAddr = activeAddress
+    ? activeAddress.slice(0, 4) + '...' + activeAddress.slice(-4)
+    : ''
+
+  // Is user effectively logged in (Solana Connected OR Backend Authenticated)
+  const isUserConnected = connected || isAuthenticated
 
   return (
     <>
       <motion.nav
-        ref={navRef}
-        initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0,   opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={clsx(
-          'fixed top-0 left-0 right-0 z-50 flex items-center transition-all duration-500',
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
           scrolled
-            ? 'h-14 bg-black/80 backdrop-blur-xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.5)]'
+            ? 'h-14 bg-[#0B0E11]/90 backdrop-blur-2xl border-b border-white/[0.06]'
             : 'h-16 bg-transparent'
         )}
       >
-        <div className="flex items-center w-full px-6 gap-0">
-          {/* Logo */}
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-            <Link href="/" className="flex items-center gap-2.5 mr-8 shrink-0 group">
-              <motion.div
-                animate={{ rotate: [0, 15, -15, 0] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 5, ease: 'easeInOut' }}
-                className="text-xl"
-              >
-                🥃
-              </motion.div>
-              <span className="font-black text-base tracking-tight text-white">
-                LIQ<span className="text-[#0052FF]">OUR</span>
-              </span>
-              <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0052FF]/10 border border-[#0052FF]/20 text-[#0052FF] text-[10px] font-semibold tracking-wider ml-1">
-                <Zap size={10} /> PERPS
-              </span>
-            </Link>
-          </motion.div>
+        <div className="flex items-center h-full w-full px-5 gap-1">
 
-          {/* Markets dropdown */}
+          {/* ── Logo ── */}
+          <Link href="/" className="flex items-center gap-2.5 mr-6 shrink-0 group">
+            <motion.span
+              animate={{ rotate: [0, 12, -12, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 6 }}
+              className="text-xl select-none"
+            >🥃</motion.span>
+            <span className="font-black text-[15px] tracking-tight text-white">
+              LIQ<span className="text-[#0052FF]">OUR</span>
+            </span>
+            <span className="hidden lg:flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0052FF]/10 border border-[#0052FF]/25 text-[#4F8EFF] text-[10px] font-bold tracking-widest">
+              <Zap size={9} strokeWidth={2.5} /> PERPS
+            </span>
+          </Link>
+
+          {/* ── Markets dropdown ── */}
           <div
-            className="relative mr-2"
+            className="relative mr-1"
             onMouseEnter={() => setShowMarkets(true)}
             onMouseLeave={() => setShowMarkets(false)}
           >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={clsx(
-                'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors',
-                isTrading
-                  ? 'text-[#0052FF] bg-[#0052FF]/5 border border-[#0052FF]/20'
-                  : 'text-white/50 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              )}
-            >
-              <BarChart2 size={15} />
+            <button className={clsx(
+              'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all',
+              isTrading
+                ? 'text-[#4F8EFF] bg-[#0052FF]/8 border border-[#0052FF]/20'
+                : 'text-white/40 hover:text-white border border-transparent hover:bg-white/[0.04]'
+            )}>
+              <BarChart2 size={14} strokeWidth={2} />
               {currentMarket ? `${currentMarket}/USDC` : 'Trade'}
-              <motion.div animate={{ rotate: showMarkets ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <motion.span
+                animate={{ rotate: showMarkets ? 180 : 0 }}
+                transition={{ duration: 0.15 }}
+              >
                 <ChevronDown size={12} />
-              </motion.div>
-            </motion.button>
+              </motion.span>
+            </button>
 
             <AnimatePresence>
               {showMarkets && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute top-full left-0 mt-1.5 w-44 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                  exit={{  opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 mt-2 w-52 bg-[#0F1217] border border-white/[0.08] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden"
                 >
+                  {/* Header */}
+                  <div className="px-4 pt-3 pb-2">
+                    <p className="text-[10px] text-white/25 font-semibold tracking-widest uppercase">
+                      Perpetuals
+                    </p>
+                  </div>
                   {MARKETS.map((m, i) => (
                     <motion.div
-                      key={m}
-                      variants={staggerItem}
-                      initial="hidden"
-                      animate="show"
-                      transition={{ delay: i * 0.05 }}
+                      key={m.sym}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.04 }}
                     >
                       <Link
-                        href={`/trade/${m}`}
+                        href={`/trade/${m.sym}`}
                         className={clsx(
-                          'flex items-center justify-between px-4 py-3 text-sm transition-colors',
-                          currentMarket === m
-                            ? 'text-[#0052FF] bg-[#0052FF]/5'
-                            : 'text-white/50 hover:text-white hover:bg-white/[0.04]'
+                          'flex items-center gap-3 px-4 py-3 transition-colors group',
+                          currentMarket === m.sym
+                            ? 'bg-[#0052FF]/8 text-white'
+                            : 'text-white/50 hover:text-white hover:bg-white/[0.03]'
                         )}
                       >
-                        <span className="font-medium">{m}/USDC</span>
-                        <span className="text-[10px] text-white/20 font-mono">Perp</span>
+                        {/* Dot */}
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: m.color, boxShadow: `0 0 6px ${m.color}60` }}
+                        />
+                        <span className="flex-1 font-medium text-sm">
+                          {m.sym}<span className="text-white/25">/USDC</span>
+                        </span>
+                        <span className={clsx(
+                          'text-xs font-mono font-semibold',
+                          m.up ? 'text-[#0ECB81]' : 'text-[#F6465D]'
+                        )}>
+                          {m.change}
+                        </span>
                       </Link>
                     </motion.div>
                   ))}
+                  <div className="px-4 py-2 border-t border-white/[0.05]">
+                    <p className="text-[10px] text-white/20 text-center">Devnet · Paper Trading</p>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* ── Nav links ── */}
+          <div className="hidden md:flex items-center gap-0.5">
             {NAV.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href)
               return (
-                <motion.div key={href} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-                  <Link
-                    href={href}
-                    className={clsx(
-                      'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all',
-                      active
-                        ? 'text-white bg-white/[0.06] border border-white/10'
-                        : 'text-white/50 hover:text-white hover:bg-white/[0.04] border border-transparent'
-                    )}
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </Link>
-                </motion.div>
+                <Link key={href} href={href} className={clsx(
+                  'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all',
+                  active
+                    ? 'text-white bg-white/[0.07] border border-white/[0.08]'
+                    : 'text-white/40 hover:text-white hover:bg-white/[0.04] border border-transparent'
+                )}>
+                  <Icon size={14} strokeWidth={active ? 2.5 : 2} />
+                  {label}
+                </Link>
               )
             })}
           </div>
 
-          {/* Right side */}
-          <div className="ml-auto flex items-center gap-3">
-            {isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="hidden sm:flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/10"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse shadow-[0_0_6px_#0ECB81]" />
-                  <span className="text-xs text-white/60 font-mono">
-                    {auth.username || (auth.walletAddress?.slice(0, 4) + '...' + auth.walletAddress?.slice(-4))}
-                  </span>
-                </motion.div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => { disconnect(); logout() }}
-                  className="px-3.5 py-2 rounded-xl text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-all border border-transparent hover:border-white/10"
-                >
-                  Disconnect
-                </motion.button>
-              </div>
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowConnect(true)}
-                className="relative group inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#0052FF] text-white text-sm font-semibold overflow-hidden"
-              >
-                <span className="relative z-10">Connect Wallet</span>
-                <motion.span
-                  className="absolute inset-0 bg-gradient-to-r from-[#0045E0] to-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                />
-                <div className="absolute inset-0 rounded-xl shadow-[0_0_25px_rgba(0,82,255,0.4)] group-hover:shadow-[0_0_40px_rgba(0,82,255,0.6)] transition-shadow duration-300" />
-              </motion.button>
-            )}
+          {/* ── Right ── */}
+          <div className="ml-auto flex items-center gap-2.5">
 
-            {/* Mobile hamurger */}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              className="md:hidden text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
-              onClick={() => setMobileOpen(!mobileOpen)}
+            {/* Live indicator */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0ECB81]/5 border border-[#0ECB81]/15">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0ECB81] opacity-60" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#0ECB81]" />
+              </span>
+              <span className="text-[10px] text-[#0ECB81] font-semibold tracking-wide">LIVE</span>
+            </div>
+
+            {/* ── Auth state (Fixed Condition Layer) ── */}
+            <AnimatePresence mode="wait">
+              {isUserConnected ? (
+                <motion.div
+                  key="authed"
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{   opacity: 0, scale: 0.92 }}
+                  className="flex items-center gap-2"
+                >
+                  {/* Wallet chip */}
+                  <button
+                    onClick={copyAddr}
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.06] transition-all group"
+                  >
+                    <span className="text-xs text-white/60 font-mono group-hover:text-white/90 transition-colors">
+                      {auth?.username || shortAddr || 'Wallet Connected'}
+                    </span>
+                    {copied
+                      ? <Check size={11} className="text-[#0ECB81]" />
+                      : <Copy size={11} className="text-white/25 group-hover:text-white/50" />
+                    }
+                  </button>
+
+                  {/* Disconnect */}
+                  <button
+                    onClick={() => { disconnect(); logout() }}
+                    className="px-3 py-1.5 rounded-xl text-xs text-white/30 hover:text-[#F6465D] hover:bg-[#F6465D]/5 hover:border-[#F6465D]/20 border border-transparent transition-all"
+                  >
+                    Disconnect
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="connect"
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{   opacity: 0, scale: 0.92 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{  scale: 0.97 }}
+                  onClick={() => setShowConnect(true)}
+                  className="relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0052FF] text-white text-sm font-semibold"
+                >
+                  {/* Shimmer */}
+                  <motion.span
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12"
+                    animate={{ x: ['-100%', '200%'] }}
+                    transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
+                  />
+                  <span className="relative z-10">Connect Wallet</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {/* Mobile menu toggle */}
+            <button
+              className="md:hidden p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.04] transition-colors"
+              onClick={() => setMobileOpen(v => !v)}
             >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </motion.button>
+              <AnimatePresence mode="wait">
+                {mobileOpen
+                  ? <motion.span key="x"  initial={{rotate:-90,opacity:0}} animate={{rotate:0,opacity:1}} exit={{rotate:90,opacity:0}} transition={{duration:0.15}}><X size={20}/></motion.span>
+                  : <motion.span key="m"  initial={{rotate:90,opacity:0}}  animate={{rotate:0,opacity:1}} exit={{rotate:-90,opacity:0}} transition={{duration:0.15}}><Menu size={20}/></motion.span>
+                }
+              </AnimatePresence>
+            </button>
           </div>
         </div>
 
-        {/* Mobile overlay */}
+        {/* ── Mobile fullscreen menu ── */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 top-0 z-40 bg-black/95 backdrop-blur-2xl md:hidden"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1,  y: 0 }}
+              exit={{   opacity: 0,  y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 top-0 z-[-1] bg-[#0B0E11]/98 backdrop-blur-2xl md:hidden pt-20 px-6"
             >
-              <div className="flex flex-col items-center justify-center h-full gap-6 px-6">
-                <div className="flex flex-col items-center gap-1 w-full max-w-xs">
-                  <p className="text-white/20 text-xs font-semibold tracking-widest uppercase mb-2">Markets</p>
-                  {MARKETS.map((m) => (
-                    <motion.div
-                      key={m}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="w-full"
-                    >
-                      <Link
-                        href={`/trade/${m}`}
-                        onClick={() => setMobileOpen(false)}
-                        className="flex items-center justify-between w-full px-6 py-4 rounded-2xl text-lg text-white/60 hover:text-white hover:bg-white/[0.04] transition-all border border-transparent hover:border-white/10"
+              {/* Close tap area */}
+              <div className="absolute inset-0" onClick={() => setMobileOpen(false)} />
+
+              <div className="relative flex flex-col gap-8 max-w-xs mx-auto">
+                {/* Markets */}
+                <div>
+                  <p className="text-[10px] text-white/25 font-bold tracking-widest uppercase mb-3">Markets</p>
+                  <div className="flex flex-col gap-1">
+                    {MARKETS.map((m, i) => (
+                      <motion.div
+                        key={m.sym}
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.06 }}
                       >
-                        <span className="font-semibold">{m}/USDC</span>
-                        <span className="text-xs text-white/20">Perp</span>
-                      </Link>
-                    </motion.div>
-                  ))}
+                        <Link
+                          href={`/trade/${m.sym}`}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all border border-transparent hover:border-white/[0.08]"
+                        >
+                          <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+                          <span className="flex-1 font-semibold">{m.sym}/USDC</span>
+                          <span className={m.up ? 'text-[#0ECB81] text-xs' : 'text-[#F6465D] text-xs'}>
+                            {m.change}
+                          </span>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="flex flex-col items-center gap-1 w-full max-w-xs">
-                  <p className="text-white/20 text-xs font-semibold tracking-widest uppercase mb-2">Navigate</p>
-                  {NAV.map(({ href, label }, i) => (
-                    <motion.div
-                      key={href}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + i * 0.05 }}
-                      className="w-full"
-                    >
-                      <Link
-                        href={href}
-                        onClick={() => setMobileOpen(false)}
-                        className="block w-full px-6 py-4 rounded-2xl text-lg text-white/60 hover:text-white hover:bg-white/[0.04] transition-all text-center"
+
+                <div className="h-px bg-white/[0.06]" />
+
+                {/* Nav */}
+                <div>
+                  <p className="text-[10px] text-white/25 font-bold tracking-widest uppercase mb-3">Navigate</p>
+                  <div className="flex flex-col gap-1">
+                    {NAV.map(({ href, label, icon: Icon }, i) => (
+                      <motion.div
+                        key={href}
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.18 + i * 0.06 }}
                       >
-                        {label}
-                      </Link>
-                    </motion.div>
-                  ))}
+                        <Link
+                          href={href}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all"
+                        >
+                          <Icon size={16} />
+                          <span className="font-semibold">{label}</span>
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Auth in mobile (Fixed condition) */}
+                {!isUserConnected ? (
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    onClick={() => { setMobileOpen(false); setShowConnect(true) }}
+                    className="w-full py-3.5 rounded-2xl bg-[#0052FF] text-white font-bold text-sm"
+                  >
+                    Connect Wallet
+                  </motion.button>
+                ) : (
+                  <button
+                    onClick={() => { setMobileOpen(false); disconnect(); logout() }}
+                    className="w-full py-3.5 rounded-2xl bg-[#F6465D]/10 text-[#F6465D] border border-[#F6465D]/20 font-bold text-sm"
+                  >
+                    Disconnect ({shortAddr || 'Wallet'})
+                  </button>
+                )}
               </div>
             </motion.div>
           )}

@@ -72,6 +72,11 @@ export const unfollowTrader = (id: string) =>
 
 export const getFollowing = () =>
   req<{ following: FollowRow[] }>('/follow/following')
+//  close the trade also 
+export const closePosition = (market: string) =>
+  req('/positions/close', { method: 'POST', body: JSON.stringify({ market }) })
+
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type Market = {

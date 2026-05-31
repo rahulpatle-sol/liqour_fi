@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SolanaWalletProvider>
           <LenisScrollProvider>
             <div className="min-h-screen bg-black">
-              <Navbar />
+              <Navbar/>
               <main className="">{children}</main>
             </div>
           </LenisScrollProvider>

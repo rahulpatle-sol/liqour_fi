@@ -1,91 +1,133 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { getMarket } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
 type Level = [number, number]
 
+// Backend se [price, qty] ya {price, qty} dono handle karo
+function normalizeLevel(l: any): Level {
+  if (Array.isArray(l)) return [+l[0], +l[1]]
+  if (l && typeof l === 'object') return [+(l.price ?? l[0] ?? 0), +(l.qty ?? l.size ?? l[1] ?? 0)]
+  return [0, 0]
+}
+
+function normalizeLevels(arr: any): Level[] {
+  if (!Array.isArray(arr)) return []
+  return arr.map(normalizeLevel).filter(([p]) => p > 0)
+}
+
 export default function OrderBook({ market }: { market: string }) {
-  const [bids, setBids] = useState<Level[]>([])
-  const [asks, setAsks] = useState<Level[]>([])
-  const [last, setLast] = useState(0)
+  const [bids, setBids]         = useState<Level[]>([])
+  const [asks, setAsks]         = useState<Level[]>([])
+  const [last, setLast]         = useState(0)
   const [prevLast, setPrevLast] = useState(0)
-  const { subscribe, on } = useWebSocket()
+  const [flash, setFlash]       = useState<'up' | 'down' | null>(null)
+  const { subscribe, on }       = useWebSocket()
 
   useEffect(() => {
     getMarket(market).then(d => {
       if (!d?.orderbook) return
-      const b = Array.isArray(d.orderbook.bids) ? d.orderbook.bids : []
-      const a = Array.isArray(d.orderbook.asks) ? d.orderbook.asks : []
-      setBids(b.slice(0,14))
-      setAsks(a.slice(0,14))
-      setLast(d.orderbook.last_traded_price || d.price)
+      setBids(normalizeLevels(d.orderbook.bids).slice(0, 14))
+      setAsks(normalizeLevels(d.orderbook.asks).slice(0, 14))
+      setLast(d.orderbook.last_traded_price || d.price || 0)
     }).catch(() => {})
+
     subscribe(`orderbook:${market}`)
     subscribe(`price:${market}`)
+
     const u1 = on('ORDERBOOK_UPDATE', (d: any) => {
       if (!d || d.market !== market) return
-      setBids(Array.isArray(d.bids) ? d.bids.slice(0,14) : [])
-      setAsks(Array.isArray(d.asks) ? d.asks.slice(0,14) : [])
+      setBids(normalizeLevels(d.bids).slice(0, 14))
+      setAsks(normalizeLevels(d.asks).slice(0, 14))
     })
+
     const u2 = on('PRICE_UPDATE', (d: any) => {
       if (!d || d.market !== market) return
-      setLast((prev) => { setPrevLast(prev); return d.price })
+      setLast(prev => {
+        setPrevLast(prev)
+        const dir = d.price >= prev ? 'up' : 'down'
+        setFlash(dir)
+        setTimeout(() => setFlash(null), 400)
+        return +d.price
+      })
     })
+
     return () => { u1(); u2() }
   }, [market, subscribe, on])
 
-  const safeBids = Array.isArray(bids) ? bids : []
-  const safeAsks = Array.isArray(asks) ? asks : []
-  const maxQ = Math.max(...safeBids.map(b=>b[1]),...safeAsks.map(a=>a[1]),0.001)
-  const spread = safeAsks[0]?.[0] && safeBids[0]?.[0] ? (safeAsks[0][0] - safeBids[0][0]).toFixed(4) : '—'
-  const spreadPct = safeAsks[0]?.[0] && safeBids[0]?.[0] ? ((safeAsks[0][0]-safeBids[0][0])/safeAsks[0][0]*100).toFixed(3) : '—'
+  const maxQ    = Math.max(...bids.map(b => b[1]), ...asks.map(a => a[1]), 0.001)
+  const spread  = asks[0]?.[0] && bids[0]?.[0] ? (asks[0][0] - bids[0][0]).toFixed(4) : '—'
+  const spreadP = asks[0]?.[0] && bids[0]?.[0]
+    ? ((asks[0][0] - bids[0][0]) / asks[0][0] * 100).toFixed(3) : '—'
   const up = last >= prevLast
-  const fmtP = (n: number) => n > 999 ? n.toLocaleString('en-US',{maximumFractionDigits:2}) : n.toFixed(4)
-  const fmtQ = (n: number) => n.toFixed(4)
+
+  const fmtP = (n: number) => n > 999
+    ? n.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    : n.toFixed(4)
 
   return (
-    <div className="flex flex-col h-full bg-secondary border-l border-border">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border shrink-0">
-        <span className="text-xs font-semibold text-tx-primary">Order Book</span>
-        <span className="text-xs text-tx-muted">Depth</span>
-      </div>
-      <div className="grid grid-cols-2 px-3 py-1.5 text-xs text-tx-muted border-b border-border shrink-0">
-        <span>Price(USDC)</span>
+    <div className="flex flex-col h-full bg-[#0B0E11]">
+      {/* Column headers */}
+      <div className="grid grid-cols-2 px-3 py-1.5 text-[10px] text-[#848E9C] border-b border-[#2B3139] uppercase tracking-wider shrink-0">
+        <span>Price (USDC)</span>
         <span className="text-right">Amount</span>
       </div>
+
+      {/* Asks — reversed so lowest ask is closest to mid */}
       <div className="flex-1 overflow-hidden flex flex-col justify-end">
-        {[...safeAsks].reverse().slice(0,12).map(([p,q], i) => {
+        {[...asks].reverse().slice(0, 12).map(([p, q], i) => {
           const pct = (q / maxQ) * 100
           return (
-            <div key={i} className="relative grid grid-cols-2 px-3 py-[3px] hover:bg-hover group cursor-default">
-              <div className="absolute inset-y-0 right-0 bg-short/8 transition-all" style={{width:`${pct}%`}}/>
-              <span className="text-short text-xs font-mono relative z-10">{fmtP(p)}</span>
-              <span className="text-right text-tx-secondary text-xs font-mono relative z-10">{fmtQ(q)}</span>
+            <div key={i} className="relative grid grid-cols-2 px-3 py-[3.5px] hover:bg-[#1E2329] cursor-default group">
+              <div
+                className="absolute inset-y-0 right-0 bg-[#F6465D]/8 transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+              <span className="text-[#F6465D] text-xs font-mono relative z-10 group-hover:text-[#FF6B7A]">
+                {fmtP(p)}
+              </span>
+              <span className="text-right text-[#848E9C] text-xs font-mono relative z-10">
+                {q.toFixed(4)}
+              </span>
             </div>
           )
         })}
       </div>
-      <div className="px-3 py-2 border-y border-border bg-card/50 shrink-0">
+
+      {/* Mid price */}
+      <div className={`px-3 py-2.5 border-y border-[#2B3139] shrink-0 transition-colors duration-300 ${
+        flash === 'up'   ? 'bg-[#0ECB81]/5' :
+        flash === 'down' ? 'bg-[#F6465D]/5' : 'bg-[#161A1E]'
+      }`}>
         <div className="flex items-center justify-between">
-          <span className={`text-base font-black font-mono ${up ? 'text-long' : 'text-short'}`}>
+          <span className={`text-sm font-black font-mono transition-colors ${up ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>
             {up ? '↑' : '↓'} {fmtP(last)}
           </span>
-          <span className="text-tx-muted text-xs">≈ ${fmtP(last)}</span>
+          <span className="text-[#5E6673] text-xs font-mono">≈ ${fmtP(last)}</span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
-          <span className="text-tx-muted text-xs">Spread</span>
-          <span className="text-tx-muted text-xs">{spread} ({spreadPct}%)</span>
+          <span className="text-[#5E6673] text-[10px]">Spread</span>
+          <span className="text-[#5E6673] text-[10px]">{spread} ({spreadP}%)</span>
         </div>
       </div>
+
+      {/* Bids */}
       <div className="flex-1 overflow-hidden">
-        {safeBids.slice(0,12).map(([p,q], i) => {
+        {bids.slice(0, 12).map(([p, q], i) => {
           const pct = (q / maxQ) * 100
           return (
-            <div key={i} className="relative grid grid-cols-2 px-3 py-[3px] hover:bg-hover cursor-default">
-              <div className="absolute inset-y-0 right-0 bg-long/8 transition-all" style={{width:`${pct}%`}}/>
-              <span className="text-long text-xs font-mono relative z-10">{fmtP(p)}</span>
-              <span className="text-right text-tx-secondary text-xs font-mono relative z-10">{fmtQ(q)}</span>
+            <div key={i} className="relative grid grid-cols-2 px-3 py-[3.5px] hover:bg-[#1E2329] cursor-default group">
+              <div
+                className="absolute inset-y-0 right-0 bg-[#0ECB81]/8 transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+              <span className="text-[#0ECB81] text-xs font-mono relative z-10 group-hover:text-[#2EE89A]">
+                {fmtP(p)}
+              </span>
+              <span className="text-right text-[#848E9C] text-xs font-mono relative z-10">
+                {q.toFixed(4)}
+              </span>
             </div>
           )
         })}
