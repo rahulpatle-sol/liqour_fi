@@ -1,37 +1,41 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getPositions, getOrders, cancelOrder,closePosition } from '@/lib/api'
-import type { PositionWithPnl, Order } from '@/lib/api'
+import { getPositions, getOrders, getHistory, cancelOrder, closePosition } from '@/lib/api'
+import type { PositionWithPnl, Order, Fill } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useAuth } from '@/hooks/useAuth'
+import { useWallet } from '@solana/wallet-adapter-react'
 import clsx from 'clsx'
 
 type Tab = 'positions'|'orders'|'history'
 
 export default function PositionsTable() {
   const { isAuthenticated, auth } = useAuth()
+  const { publicKey } = useWallet()
   const [tab, setTab] = useState<Tab>('positions')
   const [positions, setPositions] = useState<PositionWithPnl[]>([])
   const [orders, setOrders] = useState<Order[]>([])
+  const [history, setHistory] = useState<Fill[]>([])
   const [balance, setBalance] = useState<{available:number;locked:number}|null>(null)
   const { subscribe, on } = useWebSocket(auth?.userId)
 
   const load = async () => {
     if (!isAuthenticated) return
     try {
-      const [p, o] = await Promise.all([getPositions(), getOrders('open')])
+      const [p, o, h] = await Promise.all([getPositions(), getOrders('open'), getHistory()])
       setPositions(p.positions); setOrders(o.orders); setBalance(p.balance)
+      setHistory(h.history)
     } catch {}
   }
 
-  useEffect(() => { load() }, [isAuthenticated, auth?.walletAddress])
+  useEffect(() => { load() }, [isAuthenticated, publicKey, auth?.token])
 
   useEffect(() => {
     if (!isAuthenticated) return
     subscribe('positions')
     const u = on('POSITION_UPDATE', () => load())
     return () => { u() }
-  }, [isAuthenticated, auth?.walletAddress, subscribe, on])
+  }, [isAuthenticated, publicKey, auth?.token, subscribe, on])
 
   const fmtP = (n: number) => n > 999 ? '$' + n.toLocaleString('en-US',{maximumFractionDigits:2}) : '$' + n.toFixed(4)
 
@@ -39,11 +43,11 @@ export default function PositionsTable() {
     <div className="flex flex-col h-full bg-secondary border-t border-border overflow-hidden">
       {/* Tabs + balance */}
       <div className="flex items-center border-b border-border shrink-0 px-2">
-        {(['positions','orders'] as Tab[]).map(t=>(
+        {(['positions','orders','history'] as Tab[]).map(t=>(
           <button key={t} onClick={()=>setTab(t)}
             className={clsx('px-4 py-2.5 text-xs font-semibold capitalize border-b-2 transition-colors',
               tab===t?'border-orange text-tx-primary':'border-transparent text-tx-muted hover:text-tx-secondary')}>
-            {t} ({t==='positions'?positions.length:orders.length})
+            {t} ({t==='positions'?positions.length:t==='orders'?orders.length:history.length})
           </button>
         ))}
         {balance&&(
@@ -57,7 +61,7 @@ export default function PositionsTable() {
       {tab==='positions'&&(
         positions.length===0
           ? <div className="flex items-center justify-center flex-1 text-tx-muted text-sm">No open positions</div>
-          : <div className="overflow-x-auto flex-1">
+          : <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-secondary border-b border-border">
                   <tr>{['Market','Side','Size','Entry Price','Mark Price','Liq. Price','PnL','Margin',''].map(h=>(
@@ -96,7 +100,7 @@ export default function PositionsTable() {
       {tab==='orders'&&(
         orders.length===0
           ? <div className="flex items-center justify-center flex-1 text-tx-muted text-sm">No open orders</div>
-          : <div className="overflow-x-auto flex-1">
+          : <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-secondary border-b border-border">
                   <tr>{['Market','Type','Side','Price','Amount','Filled','Status',''].map(h=>(
@@ -119,6 +123,36 @@ export default function PositionsTable() {
                         <button onClick={()=>cancelOrder(o.order_id).then(load).catch(()=>{})}
                           className="text-tx-muted hover:text-short text-xs transition-colors">Cancel</button>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+      )}
+
+      {tab==='history'&&(
+        history.length===0
+          ? <div className="flex items-center justify-center flex-1 text-tx-muted text-sm">No trade history</div>
+          : <div className="overflow-x-auto overflow-y-auto flex-1">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-secondary border-b border-border">
+                  <tr>{['Market','Side','Price','Size','PnL','Time'].map(h=>(
+                    <th key={h} className="px-4 py-2 text-left text-tx-muted font-medium whitespace-nowrap">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {history.map(f=>(
+                    <tr key={f.fill_id} className="border-b border-border/50 hover:bg-hover">
+                      <td className="px-4 py-2.5 font-bold text-tx-primary">{f.market}</td>
+                      <td className={clsx('px-4 py-2.5 font-semibold capitalize',+f.pnl>=0?'text-long':'text-short')}>
+                        {+f.pnl>=0?'BUY':'SELL'}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-tx-secondary">${(+f.price).toFixed(2)}</td>
+                      <td className="px-4 py-2.5 font-mono text-tx-secondary">{(+f.qty).toFixed(4)}</td>
+                      <td className={clsx('px-4 py-2.5 font-bold font-mono',+f.pnl>=0?'text-long':'text-short')}>
+                        {+f.pnl>=0?'+':''}{fmtP(f.pnl)}
+                      </td>
+                      <td className="px-4 py-2.5 text-tx-muted text-[11px]">{new Date(f.created_at).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>

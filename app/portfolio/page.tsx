@@ -25,14 +25,14 @@ export default function PortfolioPage() {
     getPositions().then(d=>{setPositions(d.positions);setBalance(d.balance)}).catch(()=>{})
     getHistory().then(d=>{setHistory(d.history);setTotalPnl(d.history.reduce((s,f)=>s+(+f.pnl),0))}).catch(()=>{})
     getFollowing().then(d=>setCopying(d.following)).catch(()=>{})
-  }, [isAuthenticated, auth?.walletAddress])
-  useEffect(() => { fetchAll() }, [fetchAll])
+  }, [isAuthenticated, auth?.token])
+  useEffect(() => { fetchAll() }, [fetchAll, publicKey, auth?.token])
   useEffect(() => {
     if (!isAuthenticated) return
     subscribe('positions')
     const u = on('POSITION_UPDATE', () => fetchAll())
     return () => { u() }
-  }, [isAuthenticated, publicKey, subscribe, on, fetchAll])
+  }, [isAuthenticated, publicKey, auth?.token, subscribe, on, fetchAll])
   const fmt=(n:number)=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
   const totalUnrealized=positions.reduce((s,p)=>s+(+p.unrealized_pnl),0)
   if(!isAuthenticated) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><Briefcase size={48} className="text-tx-muted opacity-20"/><p className="text-tx-secondary">Connect wallet to view portfolio</p></div>
