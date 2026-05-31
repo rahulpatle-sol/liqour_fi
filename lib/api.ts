@@ -78,6 +78,17 @@ export const closePosition = (market: string) =>
 
 
 
+// ── Deposit / Withdraw ───────────────────────────────────────────────────────────
+export const verifyDeposit = (tx_signature: string) =>
+  req<{ success: boolean; deposited: number; new_balance: number; message: string }>(
+    '/deposit/verify', { method: 'POST', body: JSON.stringify({ tx_signature }) }
+  )
+
+export const requestWithdraw = (amount: number) =>
+  req<{ success: boolean; amount: number; status: string; message: string; tx_signature: string }>(
+    '/deposit/withdraw-request', { method: 'POST', body: JSON.stringify({ amount }) }
+  )
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type Market = {
   market: string

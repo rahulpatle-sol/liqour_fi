@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 import { getPositions, getHistory, getFollowing } from '@/lib/api'
 import type { PositionWithPnl, Fill, FollowRow } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
+import WalletActions from '@/components/portfolio/WalletActions'
 import Link from 'next/link'
 import clsx from 'clsx'
-import { Briefcase, TrendingUp, History, Users } from 'lucide-react'
+import { Briefcase, TrendingUp, History, Users, Wallet } from 'lucide-react'
 type Tab='positions'|'history'|'copying'
 export default function PortfolioPage() {
   const { isAuthenticated,auth }=useAuth()
@@ -26,7 +27,10 @@ export default function PortfolioPage() {
   if(!isAuthenticated) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4"><Briefcase size={48} className="text-tx-muted opacity-20"/><p className="text-tx-secondary">Connect wallet to view portfolio</p></div>
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-8"><Briefcase size={22} className="text-orange"/><h1 className="text-2xl font-black text-tx-primary">Portfolio</h1><span className="text-tx-muted text-sm font-mono">{auth.username||auth.walletAddress?.slice(0,8)+'...'}</span></div>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3"><Briefcase size={22} className="text-orange"/><h1 className="text-2xl font-black text-tx-primary">Portfolio</h1><span className="text-tx-muted text-sm font-mono">{auth.username||auth.walletAddress?.slice(0,8)+'...'}</span></div>
+        <WalletActions onUpdate={() => { getPositions().then(d => { setPositions(d.positions); setBalance(d.balance) }) }} />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {[{label:'Available',value:fmt(balance?.available||0),color:'text-tx-primary'},{label:'Margin Used',value:fmt(balance?.locked||0),color:'text-orange'},{label:'Unrealized PnL',value:(totalUnrealized>=0?'+':'')+fmt(totalUnrealized),color:totalUnrealized>=0?'text-long':'text-short'},{label:'Realized PnL',value:(totalPnl>=0?'+':'')+fmt(totalPnl),color:totalPnl>=0?'text-long':'text-short'}].map(s=>(
           <div key={s.label} className="bg-card border border-border rounded-xl p-4"><p className="text-tx-muted text-xs mb-1">{s.label}</p><p className={`text-lg font-black font-mono ${s.color}`}>{s.value}</p></div>
