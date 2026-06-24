@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createChart } from 'lightweight-charts'
-import { getCandles } from '@/lib/api'
+import { createChart, LineStyle } from 'lightweight-charts'
+import { getCandles, getMarket } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
 const TF_SECS: Record<string, number> = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 }
@@ -17,9 +17,49 @@ export default function TradingChart({ market }: { market: string }) {
   const [change, setChange] = useState(0)
   const [high, setHigh] = useState(0)
   const [low, setLow] = useState(0)
+  const [markPrice, setMarkPrice] = useState(0)
+  const prevCloseLineRef = useRef<any>(null)
+  const markPriceLineRef = useRef<any>(null)
+  const markPriceRef = useRef(0)
   const { subscribe, on } = useWebSocket()
 
   useEffect(() => { tfRef.current = tf }, [tf])
+
+  const updatePriceLines = useCallback((cData: any[], mark?: number) => {
+    if (!candleRef.current) return
+
+    if (prevCloseLineRef.current) {
+      try { candleRef.current.removePriceLine(prevCloseLineRef.current) } catch {}
+      prevCloseLineRef.current = null
+    }
+    if (markPriceLineRef.current) {
+      try { candleRef.current.removePriceLine(markPriceLineRef.current) } catch {}
+      markPriceLineRef.current = null
+    }
+
+    if (cData.length > 1) {
+      const prevClose = cData[cData.length - 2].close
+      prevCloseLineRef.current = candleRef.current.createPriceLine({
+        price: prevClose,
+        color: '#848E9C',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'Prev Close',
+      })
+    }
+
+    if (mark && mark > 0) {
+      markPriceLineRef.current = candleRef.current.createPriceLine({
+        price: mark,
+        color: '#F0B90B',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: 'Mark',
+      })
+    }
+  }, [])
 
   const loadCandles = useCallback((resolution: string) => {
     if (!candleRef.current || !volRef.current) return
@@ -36,8 +76,9 @@ export default function TradingChart({ market }: { market: string }) {
       setLow(Math.min(...cData.map(c => c.low)))
       setChange(((last.close - first.open) / first.open) * 100)
       chartRef.current?.timeScale().fitContent()
+      updatePriceLines(cData, markPriceRef.current)
     })
-  }, [market])
+  }, [market, updatePriceLines])
 
   const initChart = useCallback(() => {
     if (!containerRef.current) return
@@ -106,6 +147,15 @@ export default function TradingChart({ market }: { market: string }) {
     loadCandles(tf)
   }, [tf, loadCandles])
 
+  useEffect(() => {
+    if (!market) return
+    getMarket(market).then(data => {
+      const idx = data.orderbook?.index_price ?? 0
+      markPriceRef.current = idx
+      setMarkPrice(idx)
+    }).catch(() => {})
+  }, [market])
+
   const fmtP = (n: number) => n > 999 ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : n.toFixed(4)
   const up = change >= 0
 
@@ -122,6 +172,9 @@ export default function TradingChart({ market }: { market: string }) {
         <div className="flex items-center gap-4 text-xs text-[#848E9C]">
           <span>H: <span className="text-[#EAECEF]">{fmtP(high)}</span></span>
           <span>L: <span className="text-[#EAECEF]">{fmtP(low)}</span></span>
+          {markPrice > 0 && (
+            <span className="text-[#F0B90B]">Mark: <span className="text-[#EAECEF]">{fmtP(markPrice)}</span></span>
+          )}
         </div>
         <div className="ml-auto flex gap-1">
           {Object.keys(TF_SECS).map(t => (
