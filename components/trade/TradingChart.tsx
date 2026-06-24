@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { createChart, LineStyle } from 'lightweight-charts'
 import { getCandles, getMarket } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -18,9 +19,12 @@ export default function TradingChart({ market }: { market: string }) {
   const [high, setHigh] = useState(0)
   const [low, setLow] = useState(0)
   const [markPrice, setMarkPrice] = useState(0)
+  const [priceFlash, setPriceFlash] = useState<'up'|'down'|null>(null)
+  const [loading, setLoading] = useState(true)
   const prevCloseLineRef = useRef<any>(null)
   const markPriceLineRef = useRef<any>(null)
   const markPriceRef = useRef(0)
+  const priceFlashTimer = useRef<NodeJS.Timeout>()
   const { subscribe, on } = useWebSocket()
 
   useEffect(() => { tfRef.current = tf }, [tf])
@@ -63,8 +67,9 @@ export default function TradingChart({ market }: { market: string }) {
 
   const loadCandles = useCallback((resolution: string) => {
     if (!candleRef.current || !volRef.current) return
+    setLoading(true)
     getCandles(market, 300, resolution).then(({ candles }) => {
-      if (!candles.length) return
+      if (!candles.length) { setLoading(false); return }
       const cData = candles.map(c => ({ time: c.timestamp as any, open: +c.open, high: +c.high, low: +c.low, close: +c.close }))
       const vData = candles.map(c => ({ time: c.timestamp as any, value: +c.volume || 0, color: +c.close >= +c.open ? 'rgba(14,203,129,0.3)' : 'rgba(246,70,93,0.3)' }))
       candleRef.current.setData(cData)
@@ -77,6 +82,7 @@ export default function TradingChart({ market }: { market: string }) {
       setChange(((last.close - first.open) / first.open) * 100)
       chartRef.current?.timeScale().fitContent()
       updatePriceLines(cData, markPriceRef.current)
+      setLoading(false)
     })
   }, [market, updatePriceLines])
 
@@ -127,7 +133,13 @@ export default function TradingChart({ market }: { market: string }) {
     const unsub = on('PRICE_UPDATE', (d: any) => {
       if (d.market !== market || !candleRef.current) return
       const p = +d.price
-      setPrice(p)
+      setPrice(prev => {
+        const dir = p >= prev ? 'up' : 'down'
+        setPriceFlash(dir)
+        clearTimeout(priceFlashTimer.current)
+        priceFlashTimer.current = setTimeout(() => setPriceFlash(null), 500)
+        return p
+      })
       const secs = TF_SECS[tfRef.current] || 60
       const bucket = Math.floor(Date.now() / 1000 / secs) * secs
       if (!lastCandle || lastCandle.time !== bucket) {
@@ -164,7 +176,7 @@ export default function TradingChart({ market }: { market: string }) {
       <div className="flex items-center gap-3 px-4 py-2 border-b border-[#2B3139] flex-wrap shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-[#EAECEF] font-bold">{market}/USDC</span>
-          <span className={`text-lg font-black font-mono ${up ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}>{fmtP(price)}</span>
+          <span className={`text-lg font-black font-mono rounded-lg px-1 transition-colors ${up ? 'text-[#0ECB81]' : 'text-[#F6465D]'} ${priceFlash === 'up' ? 'animate-flash-green' : priceFlash === 'down' ? 'animate-flash-red' : ''}`}>{fmtP(price)}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded ${up ? 'bg-[#0ECB81]/10 text-[#0ECB81]' : 'bg-[#F6465D]/10 text-[#F6465D]'}`}>
             {up ? '+' : ''}{change.toFixed(2)}%
           </span>
@@ -185,7 +197,41 @@ export default function TradingChart({ market }: { market: string }) {
           ))}
         </div>
       </div>
-      <div ref={containerRef} className="flex-1 min-h-0" />
+      <div className="flex-1 min-h-0 relative">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0B0E11] z-10">
+            <div className="flex flex-col items-center gap-4">
+              {/* Animated candlestick loader */}
+              <div className="flex items-end gap-[3px] h-12">
+                {[40, 60, 30, 70, 45, 55, 35, 65, 50, 42, 62, 38].map((h, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ height: 0 }}
+                    animate={{ height: h }}
+                    transition={{
+                      duration: 0.6,
+                      delay: i * 0.08,
+                      repeat: Infinity,
+                      repeatDelay: 0.4,
+                      ease: 'easeInOut',
+                    }}
+                    className={`w-[3px] rounded-full ${i % 2 === 0 ? 'bg-[#0ECB81]' : 'bg-[#F6465D]'}`}
+                    style={{ opacity: 0.3 + (i / 12) * 0.7 }}
+                  />
+                ))}
+              </div>
+              <motion.p
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="text-[#848E9C] text-xs font-mono"
+              >
+                LOADING_CHART_DATA...
+              </motion.p>
+            </div>
+          </div>
+        )}
+        <div ref={containerRef} className="flex-1 min-h-0 w-full h-full" />
+      </div>
     </div>
   )
 }

@@ -10,25 +10,26 @@ const FOOTER_LINKS: { title: string; links: FooterLink[] }[] = [
   {
     title: 'Protocol',
     links: [
-      { label: 'Markets',    href: '/trade/SOL' },
-      { label: 'Leaderboard', href: '/leaderboard' },
-      { label: 'Portfolio',   href: '/portfolio' },
+      { label: 'Markets',      href: '/trade/SOL' },
+      { label: 'Leaderboard',  href: '/leaderboard' },
+      { label: 'Portfolio',    href: '/portfolio' },
+      { label: 'About',        href: '/about' },
     ],
   },
   {
     title: 'Resources',
     links: [
-      { label: 'Documentation', href: '#', external: true },
+      { label: 'Documentation',   href: '/docs' },
       { label: 'Solana Explorer', href: 'https://explorer.solana.com', external: true },
-      { label: 'Status Page',   href: '#', external: true },
+      { label: 'System Status',   href: '/status' },
     ],
   },
   {
     title: 'Legal',
     links: [
-      { label: 'Terms of Use',  href: '#' },
-      { label: 'Privacy Policy', href: '#' },
-      { label: 'Risk Disclosure', href: '#' },
+      { label: 'Terms of Use',    href: '/terms' },
+      { label: 'Privacy Policy',  href: '/privacy' },
+      { label: 'Risk Disclosure', href: '/risk-disclosure' },
     ],
   },
 ]

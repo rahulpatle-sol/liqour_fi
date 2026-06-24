@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { placeOrder } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
-import { TrendingUp, TrendingDown, Loader, Info } from 'lucide-react'
+import { emit } from '@/lib/events'
+import { Loader } from 'lucide-react'
 import clsx from 'clsx'
 
 const LEVERAGES = [1,2,3,5,10,20,50]
@@ -15,7 +16,10 @@ export default function OrderForm({ market, price }: { market:string; price:numb
   const [lp, setLp] = useState('')
   const [lev, setLev] = useState(10)
   const [loading, setLoading] = useState(false)
-  const [msg, setMsg] = useState<{text:string;ok:boolean}|null>(null)
+  const [msg, setMsg] = useState<{text:string;ok:boolean;flash?:boolean}|null>(null)
+  const flashTimer = useRef<NodeJS.Timeout>()
+
+  useEffect(() => () => clearTimeout(flashTimer.current), [])
 
   const effPrice = otype==='market' ? price : parseFloat(lp)||0
   const margin = effPrice>0&&qty ? (effPrice*parseFloat(qty))/lev : 0
@@ -28,7 +32,9 @@ export default function OrderForm({ market, price }: { market:string; price:numb
     setLoading(true); setMsg(null)
     try {
       await placeOrder({ market, side, type:otype, qty:parseFloat(qty), ...(otype==='limit'?{price:parseFloat(lp)}:{}), leverage:lev })
-      setMsg({text:`${side==='long'?'↑ Long':'↓ Short'} order placed!`,ok:true}); setQty(''); setLp('')
+      setMsg({text:`${side==='long'?'↑ Long':'↓ Short'} order placed!`,ok:true,flash:true}); setQty(''); setLp('')
+      emit('liqour:order-placed', { market, side })
+      flashTimer.current = setTimeout(() => setMsg(prev => prev?.flash ? {...prev, flash: false} : prev), 1200)
     } catch(e:any) { setMsg({text:e.message,ok:false}) }
     finally { setLoading(false) }
   }
@@ -124,7 +130,15 @@ export default function OrderForm({ market, price }: { market:string; price:numb
         {!isAuthenticated ? 'Connect Wallet' : `${side==='long'?'↑ Buy / Long':'↓ Sell / Short'} ${market}`}
       </button>
 
-      {msg&&<p className={clsx('text-xs text-center',msg.ok?'text-long':'text-short')}>{msg.text}</p>}
+      {msg&&(
+        <div className={clsx(
+          'text-xs text-center px-3 py-2 rounded-lg font-medium transition-all duration-500',
+          msg.ok ? 'text-long bg-long/10' : 'text-short bg-short/10',
+          msg.flash && (side === 'long' ? 'animate-flash-green' : 'animate-flash-red')
+        )}>
+          {msg.text}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,18 +1,18 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useAuth } from '@/hooks/useAuth'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Loader2, CheckCircle, AlertCircle, Zap, ShieldCheck } from 'lucide-react'
+import { X, Loader2, CheckCircle, AlertCircle, Zap, ShieldCheck, Wallet, Ghost, Briefcase, Sun, Smartphone, Wifi, WifiOff } from 'lucide-react'
 
 type Step = 'choose' | 'connecting' | 'signing' | 'done' | 'error'
 
-const WALLETS = [
-  { name: 'Phantom',  emoji: '👻', desc: 'Most popular Solana wallet',  color: '#AB9FF2' },
-  { name: 'Backpack', emoji: '🎒', desc: 'xNFT wallet by Coral',        color: '#E33E3F' },
-  { name: 'Solflare', emoji: '🔆', desc: 'Non-custodial Solana wallet',  color: '#FC9018' },
-]
+const WALLET_META: Record<string, { icon: any; color: string; desc: string }> = {
+  Phantom:  { icon: Ghost,     color: '#AB9FF2', desc: 'Most popular Solana wallet' },
+  Backpack: { icon: Briefcase, color: '#E33E3F', desc: 'xNFT wallet by Coral' },
+  Solflare: { icon: Sun,       color: '#FC9018', desc: 'Non-custodial Solana wallet' },
+}
 
 const backdrop = {
   hidden: { opacity: 0 },
@@ -30,6 +30,19 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
   const { authenticate, loading, error } = useAuth()
   const [step, setStep] = useState<Step>('choose')
   const [chosen, setChosen] = useState('')
+
+  const available = useMemo(() => {
+    return wallets.filter(w =>
+      w.adapter.readyState === 'Installed' ||
+      w.adapter.readyState === 'Loadable' ||
+      (typeof window !== 'undefined' && (window as any).solana?.isPhantom)
+    )
+  }, [wallets])
+
+  const isMobile = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+  }, [])
 
   const doAuth = useCallback(async () => {
     setStep('signing')
@@ -60,6 +73,8 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
     setStep('connecting')
   }
 
+  const chosenMeta = WALLET_META[chosen]
+
   return (
     <motion.div
       initial="hidden"
@@ -67,7 +82,6 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
       exit="exit"
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 selection:bg-blue-100"
     >
-      {/* Premium light-SaaS blur backdrop */}
       <motion.div
         variants={backdrop}
         className="absolute inset-0 bg-gray-900/20 backdrop-blur-md"
@@ -78,8 +92,8 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
         className="relative w-full max-w-[380px] z-10"
       >
         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-2xl">
-          
-          {/* Modal Header */}
+
+          {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center relative overflow-hidden shrink-0">
@@ -87,7 +101,9 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
               </div>
               <div>
                 <p className="text-gray-900 font-bold text-sm tracking-tight">Connect to Liqour</p>
-                <p className="text-gray-400 text-[11px] font-medium">Solana Wallet Required</p>
+                <p className="text-gray-400 text-[11px] font-medium">
+                  {isMobile ? 'Mobile Wallet' : 'Solana Wallet Required'}
+                </p>
               </div>
             </div>
             <motion.button
@@ -110,34 +126,75 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
                 exit={{ opacity: 0, y: -8 }}
                 className="p-4 space-y-1.5"
               >
-                {WALLETS.map((w, i) => (
-                  <motion.button
-                    key={w.name}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04, type: 'spring', stiffness: 120 }}
-                    whileHover={{ scale: 1.005, borderColor: '#DEE2E6', backgroundColor: '#F8F9FA' }}
-                    whileTap={{ scale: 0.995 }}
-                    onClick={() => handleWallet(w.name)}
-                    className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-white border border-gray-100/80 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm shrink-0"
-                      style={{ background: w.color + '10', border: `1px solid ${w.color}20` }}>
-                      {w.emoji}
+                {available.length === 0 ? (
+                  <div className="text-center py-6 space-y-3">
+                    <motion.div
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mx-auto"
+                    >
+                      <Smartphone size={24} className="text-gray-400" />
+                    </motion.div>
+                    <div>
+                      <p className="text-gray-900 font-bold text-sm">No Wallet Detected</p>
+                      <p className="text-gray-400 text-[11px] mt-1 max-w-[220px] mx-auto">
+                        {isMobile
+                          ? 'Open this dApp in Phantom or Backpack in-app browser.'
+                          : 'Install Phantom or Backpack browser extension to continue.'}
+                      </p>
                     </div>
-                    <div className="text-left flex-1">
-                      <p className="text-gray-900 font-bold text-xs tracking-tight group-hover:text-[#0052FF] transition-colors">{w.name}</p>
-                      <p className="text-gray-400 text-[11px] font-medium mt-0.5">{w.desc}</p>
-                    </div>
-                    <span className="text-gray-300 group-hover:text-[#0052FF] group-hover:translate-x-0.5 text-base font-mono transition-all">›</span>
-                  </motion.button>
-                ))}
-                <p className="text-center text-[11px] text-gray-400 pt-2 font-medium">
-                  Don&apos;t have a wallet?{' '}
-                  <a href="https://phantom.app" target="_blank" rel="noopener font-semibold" className="text-[#0052FF] hover:underline">
-                    Get Phantom →
-                  </a>
-                </p>
+                    <a
+                      href="https://phantom.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0052FF] text-white text-xs font-bold hover:bg-[#0045E0] transition-colors"
+                    >
+                      <Ghost size={14} /> Get Phantom
+                    </a>
+                  </div>
+                ) : (
+                  <>
+                    {available.map((w, i) => {
+                      const meta = WALLET_META[w.adapter.name] || { icon: Wallet, color: '#6B7280', desc: 'Solana wallet' }
+                      const Icon = meta.icon
+                      return (
+                        <motion.button
+                          key={w.adapter.name}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04, type: 'spring', stiffness: 120 }}
+                          whileHover={{ scale: 1.005, borderColor: '#DEE2E6', backgroundColor: '#F8F9FA' }}
+                          whileTap={{ scale: 0.995 }}
+                          onClick={() => handleWallet(w.adapter.name)}
+                          className="w-full flex items-center gap-3.5 p-3 rounded-xl bg-white border border-gray-100/80 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm shrink-0"
+                            style={{ background: meta.color + '10', border: `1px solid ${meta.color}20` }}>
+                            <Icon size={18} style={{ color: meta.color }} />
+                          </div>
+                          <div className="text-left flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-gray-900 font-bold text-xs tracking-tight group-hover:text-[#0052FF] transition-colors">
+                                {w.adapter.name}
+                              </p>
+                              <span className="flex items-center gap-0.5 text-[9px] text-emerald-600 font-semibold">
+                                <Wifi size={8} /> Detected
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-[11px] font-medium mt-0.5">{meta.desc}</p>
+                          </div>
+                          <span className="text-gray-300 group-hover:text-[#0052FF] group-hover:translate-x-0.5 text-base font-mono transition-all">›</span>
+                        </motion.button>
+                      )
+                    })}
+                    <p className="text-center text-[11px] text-gray-400 pt-2 font-medium">
+                      Don&apos;t have a wallet?{' '}
+                      <a href="https://phantom.app" target="_blank" rel="noopener noreferrer" className="text-[#0052FF] hover:underline font-semibold">
+                        Get Phantom →
+                      </a>
+                    </p>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -163,16 +220,16 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
                     transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
                   />
                   <div className="absolute inset-3 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 shadow-inner">
-                    <motion.span 
-                      animate={{ scale: [1, 1.08, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="text-2xl select-none"
-                    >
-                      {step === 'signing' ? <ShieldCheck size={24} className="text-[#0052FF]" /> : (WALLETS.find(w => w.name === chosen)?.emoji || '👻')}
-                    </motion.span>
+                    {step === 'signing' ? (
+                      <ShieldCheck size={24} className="text-[#0052FF]" />
+                    ) : chosenMeta ? (
+                      <chosenMeta.icon size={22} style={{ color: chosenMeta.color }} />
+                    ) : (
+                      <Wallet size={22} className="text-gray-400" />
+                    )}
                   </div>
                 </div>
-                
+
                 <div className="text-center space-y-1.5">
                   <h4 className="text-gray-900 font-bold text-sm tracking-tight">
                     {step === 'connecting' ? `Opening ${chosen}...` : 'Verify Ownership'}
@@ -180,7 +237,9 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
                   <p className="text-gray-500 text-[11px] font-medium max-w-[240px] leading-relaxed mx-auto">
                     {step === 'signing'
                       ? 'Please sign the secure cryptographic verification message inside your wallet extension.'
-                      : 'Unlock your desktop extension popup and grant connection approval.'}
+                      : isMobile
+                        ? 'Approve the connection request in your mobile wallet.'
+                        : 'Unlock your desktop extension popup and grant connection approval.'}
                   </p>
                 </div>
 
@@ -209,7 +268,9 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
                   <CheckCircle size={24} className="text-emerald-600" />
                 </motion.div>
                 <div className="text-center space-y-1">
-                  <p className="text-gray-900 font-bold text-sm tracking-tight">Authentication Valid! 🎉</p>
+                  <p className="text-gray-900 font-bold text-sm tracking-tight flex items-center justify-center gap-1.5">
+                    <CheckCircle size={14} className="text-emerald-600" /> Authentication Valid!
+                  </p>
                   <p className="text-emerald-700 text-[11px] font-bold bg-emerald-50 border border-emerald-100/70 px-2.5 py-0.5 rounded-md inline-block">
                     +1000 USDC Mock Liquidity Active
                   </p>
@@ -217,7 +278,7 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
               </motion.div>
             )}
 
-            {/* Step 5: Error Handlers */}
+            {/* Step 5: Error */}
             {step === 'error' && (
               <motion.div
                 key="error"
@@ -245,7 +306,7 @@ export default function ConnectWallet({ onClose }: { onClose: () => void }) {
             )}
           </AnimatePresence>
 
-          {/* Bottom Progress Tracker Block */}
+          {/* Progress bar */}
           <div className="px-5 pb-4">
             <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
               <motion.div

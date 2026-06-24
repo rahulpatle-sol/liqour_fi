@@ -1,10 +1,11 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { getPositions, getOrders, getHistory, cancelOrder, closePosition } from '@/lib/api'
 import type { PositionWithPnl, Order, Fill } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useAuth } from '@/hooks/useAuth'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { listen } from '@/lib/events'
 import clsx from 'clsx'
 
 type Tab = 'positions'|'orders'|'history'
@@ -17,25 +18,43 @@ export default function PositionsTable() {
   const [orders, setOrders] = useState<Order[]>([])
   const [history, setHistory] = useState<Fill[]>([])
   const [balance, setBalance] = useState<{available:number;locked:number}|null>(null)
+  const [flashPnl, setFlashPnl] = useState<string | null>(null)
+  const flashTimer = useRef<NodeJS.Timeout>()
+  const prevPositionsRef = useRef<PositionWithPnl[]>([])
   const { subscribe, on } = useWebSocket(auth?.userId)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!isAuthenticated) return
     try {
       const [p, o, h] = await Promise.all([getPositions(), getOrders('open'), getHistory()])
-      setPositions(p.positions); setOrders(o.orders); setBalance(p.balance)
+      setPositions(prev => { prevPositionsRef.current = prev; return p.positions })
+      setOrders(o.orders); setBalance(p.balance)
       setHistory(h.history)
     } catch {}
-  }
+  }, [isAuthenticated])
 
   useEffect(() => { load() }, [isAuthenticated, publicKey, auth?.token])
 
   useEffect(() => {
     if (!isAuthenticated) return
     subscribe('positions')
-    const u = on('POSITION_UPDATE', () => load())
+    const u = on('POSITION_UPDATE', (d: any) => {
+      load()
+      if (d?.position_id) {
+        setFlashPnl(d.position_id)
+        clearTimeout(flashTimer.current)
+        flashTimer.current = setTimeout(() => setFlashPnl(null), 1200)
+      }
+    })
     return () => { u() }
-  }, [isAuthenticated, publicKey, auth?.token, subscribe, on])
+  }, [isAuthenticated, publicKey, auth?.token, subscribe, on, load])
+
+  useEffect(() => {
+    const unsub = listen('liqour:order-placed', () => {
+      setTimeout(load, 500)
+    })
+    return unsub
+  }, [load])
 
   const fmtP = (n: number) => n > 999 ? '$' + n.toLocaleString('en-US',{maximumFractionDigits:2}) : '$' + n.toFixed(4)
 
@@ -69,24 +88,31 @@ export default function PositionsTable() {
                   ))}</tr>
                 </thead>
                 <tbody>
-                  {positions.map(pos=>(
-                    <tr key={pos.position_id} className="border-b border-border/50 hover:bg-hover">
+                  {positions.map(pos => (
+                    <tr key={pos.position_id} className={clsx(
+                      'border-b border-border/50 hover:bg-hover transition-all duration-500',
+                      flashPnl === pos.position_id && (pos.unrealized_pnl >= 0 ? 'animate-flash-green' : 'animate-flash-red')
+                    )}>
                       <td className="px-4 py-2.5 font-bold text-tx-primary">{pos.market}</td>
                       <td className={clsx('px-4 py-2.5 font-semibold uppercase',pos.side==='long'?'text-long':'text-short')}>
                         {pos.side} {pos.leverage}×
                       </td>
                       <td className="px-4 py-2.5">
-  <button
-    onClick={() => closePosition(pos.market).then(load).catch(()=>{})}
-    className="px-2 py-1 rounded text-xs bg-short/10 text-short hover:bg-short/20 transition-colors">
-    Close
-  </button>
-</td>
+                        <button
+                          onClick={() => closePosition(pos.market).then(load).catch(()=>{})}
+                          className="px-2 py-1 rounded text-xs bg-short/10 text-short hover:bg-short/20 transition-colors"
+                        >
+                          Close
+                        </button>
+                      </td>
                       <td className="px-4 py-2.5 font-mono text-tx-secondary">{(+pos.qty).toFixed(4)}</td>
                       <td className="px-4 py-2.5 font-mono text-tx-secondary">{fmtP(pos.entry_price)}</td>
                       <td className="px-4 py-2.5 font-mono text-tx-primary">{fmtP(pos.current_price)}</td>
                       <td className="px-4 py-2.5 font-mono text-short">{fmtP(pos.liquidation_price)}</td>
-                      <td className={clsx('px-4 py-2.5 font-bold font-mono',pos.unrealized_pnl>=0?'text-long':'text-short')}>
+                      <td className={clsx(
+                        'px-4 py-2.5 font-bold font-mono transition-colors duration-300',
+                        pos.unrealized_pnl>=0?'text-long':'text-short'
+                      )}>
                         {pos.unrealized_pnl>=0?'+':''}{fmtP(pos.unrealized_pnl)}
                       </td>
                       <td className="px-4 py-2.5 font-mono text-tx-muted">{fmtP(pos.margin)}</td>

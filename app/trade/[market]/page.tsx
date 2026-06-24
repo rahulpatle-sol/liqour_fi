@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { getMarket } from '@/lib/api'
@@ -24,9 +24,11 @@ export default function TradePage() {
   const [oi, setOi]           = useState('$4.2M')
   const [funding, setFunding] = useState(0.0001)
   const [indexPrice, setIndexPrice] = useState(0)
+  const [priceFlash, setPriceFlash] = useState<'up'|'down'|null>(null)
   const [activePanel, setActivePanel] = useState<'book'|'trades'>('book')
   const [mobileTab, setMobileTab] = useState<'book'|'trade'|'positions'>('book')
   const { subscribe, on }     = useWebSocket()
+  const flashTimer = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     getMarket(market).then(d => {
@@ -39,7 +41,14 @@ export default function TradePage() {
     subscribe(`price:${market}`)
     const u = on('PRICE_UPDATE', (d: any) => {
       if (d.market !== market) return
-      setPrice(prev => { setPrev(prev); return d.price })
+      setPrice(prev => {
+        setPrev(prev)
+        const dir = +d.price >= prev ? 'up' : 'down'
+        setPriceFlash(dir)
+        clearTimeout(flashTimer.current)
+        flashTimer.current = setTimeout(() => setPriceFlash(null), 500)
+        return d.price
+      })
     })
     return () => { u() }
   }, [market, subscribe, on])
@@ -70,7 +79,11 @@ export default function TradePage() {
         <div className="shrink-0 flex flex-col">
           <span
             key={price}
-            className={`text-base lg:text-lg font-black font-mono transition-colors duration-300 leading-tight ${priceUp ? 'text-[#0ECB81]' : 'text-[#F6465D]'}`}
+            className={`text-base lg:text-lg font-black font-mono transition-colors duration-300 leading-tight rounded-lg px-1 ${
+              priceUp ? 'text-[#0ECB81]' : 'text-[#F6465D]'
+            } ${
+              priceFlash === 'up' ? 'animate-flash-green' : priceFlash === 'down' ? 'animate-flash-red' : ''
+            }`}
           >
             ${fmtP(price)}
           </span>
