@@ -10,7 +10,7 @@ import OrderForm from '@/components/trade/OrderForm'
 import PositionsTable from '@/components/trade/PositionsTable'
 import RecentTrades from '@/components/trade/RecentTrades'
 
-const TradingChart = dynamic(() => import('@/components/trade/TradingChart'), { ssr: false })
+const TVChart = dynamic(() => import('@/components/trade/TVChart'), { ssr: false })
 
 export default function TradePage() {
   const params = useParams()
@@ -113,7 +113,7 @@ export default function TradePage() {
 
         {/* Chart */}
         <div className="flex-1 min-w-0 min-h-0 relative max-lg:max-h-[50%] lg:max-h-full">
-          <TradingChart market={market} />
+          <TVChart market={market} />
         </div>
 
         {/* ── Desktop: Right Panels (lg+) ── */}

@@ -83,7 +83,7 @@ export default function TradingChart({ market }: { market: string }) {
       chartRef.current?.timeScale().fitContent()
       updatePriceLines(cData, markPriceRef.current)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [market, updatePriceLines])
 
   const initChart = useCallback(() => {

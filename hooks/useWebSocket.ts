@@ -34,7 +34,9 @@ function connectGlobal(userId?: string | null) {
   globalWs.onmessage = (e) => {
     try {
       const { type, data } = JSON.parse(e.data)
-      globalHandlers.get(type)?.forEach(h => h(data))
+      // Server sends nested data: { type, data: { type, data: { actual fields } } }
+      const payload = data?.data ?? data
+      globalHandlers.get(type)?.forEach(h => h(payload))
     } catch {}
   }
 
